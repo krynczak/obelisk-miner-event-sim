@@ -55,6 +55,9 @@ Forked from [Kommandant-Julk/shminer_event_sim](https://github.com/Kommandant-Ju
 
 ## Changelog
 
+### v1.2.1
+- Fix: hybrid gain calculation - deterministic first, Monte Carlo only for marginal gains. Prevents false positives where attack damage showed large gains when player already one-shots enemies.
+
 ### v1.2.0
 - Next Buy shows best upgrade per tier (each tier uses its own currency)
 - Next Buy ranks by gain/cost efficiency instead of raw gain
