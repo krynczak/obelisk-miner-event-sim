@@ -110,6 +110,9 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 .pres-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
 .pres-lbl{font-family:'Chakra Petch',sans-serif;font-size:10px;color:var(--t2);flex:1}
 .num-inp{width:36px;height:18px;font-size:11px}
+.pres-milestone{font-size:9px;color:var(--t2);margin-top:6px;padding-top:6px;border-top:1px solid var(--b1)}
+.pres-milestone b{color:var(--t1)}
+.pres-milestone .pres-ms-wave{color:var(--acc-dim)}
 
 
 /* ── Scrollbar ───────────────────────────── */
@@ -172,6 +175,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
         <button class="ubtn" tabindex="-1" onpointerdown="startHold(()=>changePrestige(1))" onpointerup="stopHold()" onpointercancel="stopHold()" onpointerleave="stopHold()">+</button>
       </div>
       <div id="gem-upgrades"></div>
+      <div id="pres-milestone" class="pres-milestone"></div>
     </div>
   </div>
 
@@ -223,101 +227,108 @@ const costs = [
   [5,6,8,10,12,20,75,2500,25000,5000],
   [5,8,12,20,40,500,650],
   [5,8,12,18,30,250,300,125],
-  [10,12,15,20,50,250,500,150],
+  [10,12,15,20,40,250,500,150],
 ];
 function round(n,precision=0){return parseFloat(n.toFixed(precision))}
 function modifyStat(stat,amount,target){target[stat]+=amount}
+// Each function applies a single upgrade: (level, player, enemy) => void
+// Index matches upgradeNames: upgradeInstructions[tier][upgrade]
 const upgradeInstructions=[
   [
-    (j,p,e)=>modifyStat('atk',j,p),
-    (j,p,e)=>modifyStat('health',2*j,p),
-    (j,p,e)=>modifyStat('atkSpeed',0.02*j,p),
-    (j,p,e)=>modifyStat('walkSpeed',0.03*j,p),
-    (j,p,e)=>modifyStat('gameSpeed',0.03*j,p),
-    (j,p,e)=>{modifyStat('crit',j,p);modifyStat('critDmg',0.1*j,p)},
-    (j,p,e)=>{modifyStat('atk',j,p);modifyStat('health',2*j,p)},
-    (j,p,e)=>{},
-    (j,p,e)=>modifyStat('prestigeBonusScale',0.01*j,p),
-    (j,p,e)=>{modifyStat('health',3*j,p);modifyStat('atk',3*j,p)},
+    (lv,p,e)=>modifyStat('atk',lv,p),
+    (lv,p,e)=>modifyStat('health',2*lv,p),
+    (lv,p,e)=>modifyStat('atkSpeed',0.02*lv,p),
+    (lv,p,e)=>modifyStat('walkSpeed',0.03*lv,p),
+    (lv,p,e)=>modifyStat('gameSpeed',0.03*lv,p),
+    (lv,p,e)=>{modifyStat('crit',lv,p);modifyStat('critDmg',0.1*lv,p)},
+    (lv,p,e)=>{modifyStat('atk',lv,p);modifyStat('health',2*lv,p)},
+    (lv,p,e)=>{}, // cap upgrade - no stat effect
+    (lv,p,e)=>modifyStat('prestigeBonusScale',0.01*lv,p),
+    (lv,p,e)=>{modifyStat('health',3*lv,p);modifyStat('atk',3*lv,p)},
   ],
   [
-    (j,p,e)=>modifyStat('health',3*j,p),
-    (j,p,e)=>modifyStat('atkSpeed',-0.02*j,e),
-    (j,p,e)=>modifyStat('atk',-j,e),
-    (j,p,e)=>{modifyStat('crit',-j,e);modifyStat('critDmg',-0.10*j,e)},
-    (j,p,e)=>{modifyStat('atk',j,p);modifyStat('atkSpeed',0.01*j,p)},
-    (j,p,e)=>{},
-    (j,p,e)=>modifyStat('prestigeBonusScale',0.02*j,p),
+    (lv,p,e)=>modifyStat('health',3*lv,p),
+    (lv,p,e)=>modifyStat('atkSpeed',-0.02*lv,e),
+    (lv,p,e)=>modifyStat('atk',-lv,e),
+    (lv,p,e)=>{modifyStat('crit',-lv,e);modifyStat('critDmg',-0.10*lv,e)},
+    (lv,p,e)=>{modifyStat('atk',lv,p);modifyStat('atkSpeed',0.01*lv,p)},
+    (lv,p,e)=>{}, // cap upgrade
+    (lv,p,e)=>modifyStat('prestigeBonusScale',0.02*lv,p),
   ],
   [
-    (j,p,e)=>modifyStat('atk',2*j,p),
-    (j,p,e)=>modifyStat('atkSpeed',0.02*j,p),
-    (j,p,e)=>modifyStat('crit',j,p),
-    (j,p,e)=>modifyStat('gameSpeed',0.05*j,p),
-    (j,p,e)=>{modifyStat('atk',3*j,p);modifyStat('health',3*j,p)},
-    (j,p,e)=>{},
-    (j,p,e)=>modifyStat('x5money',3*j,p),
-    (j,p,e)=>{modifyStat('health',5*j,p);modifyStat('atkSpeed',0.03*j,p)},
+    (lv,p,e)=>modifyStat('atk',2*lv,p),
+    (lv,p,e)=>modifyStat('atkSpeed',0.02*lv,p),
+    (lv,p,e)=>modifyStat('crit',lv,p),
+    (lv,p,e)=>modifyStat('gameSpeed',0.05*lv,p),
+    (lv,p,e)=>{modifyStat('atk',3*lv,p);modifyStat('health',3*lv,p)},
+    (lv,p,e)=>{}, // cap upgrade
+    (lv,p,e)=>modifyStat('x5money',3*lv,p),
+    (lv,p,e)=>{modifyStat('health',5*lv,p);modifyStat('atkSpeed',0.03*lv,p)},
   ],
   [
-    (j,p,e)=>modifyStat('blockChance',0.01*j,p),
-    (j,p,e)=>modifyStat('health',5*j,p),
-    (j,p,e)=>{modifyStat('critDmg',0.1*j,p);modifyStat('critDmg',-0.1*j,e)},
-    (j,p,e)=>{modifyStat('atkSpeed',0.02*j,p);modifyStat('walkSpeed',0.02*j,p)},
-    (j,p,e)=>{modifyStat('atk',4*j,p);modifyStat('health',4*j,p)},
-    (j,p,e)=>{},
-    (j,p,e)=>{},
-    (j,p,e)=>{modifyStat('health',10*j,p);modifyStat('atkSpeed',0.05*j,p)},
+    (lv,p,e)=>modifyStat('blockChance',0.01*lv,p),
+    (lv,p,e)=>modifyStat('health',5*lv,p),
+    (lv,p,e)=>{modifyStat('critDmg',0.1*lv,p);modifyStat('critDmg',-0.1*lv,e)},
+    (lv,p,e)=>{modifyStat('atkSpeed',0.02*lv,p);modifyStat('walkSpeed',0.02*lv,p)},
+    (lv,p,e)=>{modifyStat('atk',4*lv,p);modifyStat('health',4*lv,p)},
+    (lv,p,e)=>{}, // cap upgrade
+    (lv,p,e)=>{}, // cap of caps - no stat effect
+    (lv,p,e)=>{modifyStat('health',10*lv,p);modifyStat('atkSpeed',0.05*lv,p)},
   ],
 ];
 const playerStatsBase={defaultAtkTime:2,defaultWalkTime:4,walkSpeed:1,atkSpeed:1,health:100,atk:10,crit:0,critDmg:2,blockChance:0,gameSpeed:1,prestigeBonusScale:0.1,x2money:0,x5money:0};
 const enemyStatsBase={defaultAtkTime:2,atkSpeed:0.8,baseHealth:4,healthScaling:7,atk:2.5,atkScaling:0.6,crit:0,critDmg:1,critDmgScaling:0.05};
 
+// Apply all upgrade levels + prestige + gems to base stats, return computed player & enemy
 function parseUpgrades(upgs,basePlayer,baseEnemy,prestiges,gems){
   const p=Object.assign({},basePlayer),e=Object.assign({},baseEnemy);
-  for(let i=0;i<upgs.length;i++) for(let j=0;j<upgs[i].length;j++) upgradeInstructions[i][j](upgs[i][j]||0,p,e);
+  for(let ti=0;ti<upgs.length;ti++) for(let uj=0;uj<upgs[ti].length;uj++) upgradeInstructions[ti][uj](upgs[ti][uj]||0,p,e);
   p.atk   =round(p.atk   *(1+p.prestigeBonusScale*prestiges)*(1+0.1*gems[0]));
   p.health=round(p.health*(1+p.prestigeBonusScale*prestiges)*(1+0.1*gems[1]));
   p.gameSpeed+=gems[2]*1.25;
   p.x2money+=gems[3];
   return{p,e};
 }
-function calcMaterials(wave,p){
-  const m=(1+(p.x2money||0))*(1+4*((p.x5money||0)/100));
+// Total currencies earned from wave 1 to `wave` for each of the 4 currency types
+function calcCurrenciesPerRun(wave,p){
+  const mult=(1+(p.x2money||0))*(1+4*((p.x5money||0)/100));
   const w1=wave,w5=Math.floor(wave/5),w10=Math.floor(wave/10),w15=Math.floor(wave/15);
-  return[(w1*w1+w1)/2*m,(w5*w5+w5)/2*m,(w10*w10+w10)/2*m,(w15*w15+w15)/2*m];
+  return[(w1*w1+w1)/2*mult,(w5*w5+w5)/2*mult,(w10*w10+w10)/2*mult,(w15*w15+w15)/2*mult];
 }
 const MAX_WAVE=2000;
+// Monte Carlo single run: returns [wave, deathSubzone, totalTime]
 function eventTest(player,enemy){
-  let playerHp=player.health,pAtkProg=0,eAtkProg=0,time=0,wave=0,i2=-1;
+  let playerHp=player.health,playerAtkCooldown=0,enemyAtkCooldown=0,time=0,wave=0,deathSubzone=-1;
   while(playerHp>0&&wave<MAX_WAVE){
     wave++;
-    for(let w=5;w>=1;w--){
+    for(let sub=5;sub>=1;sub--){
       if(playerHp<=0)break;
       let enemyHp=enemy.baseHealth+enemy.healthScaling*wave;
-      const es=enemy.atkSpeed+wave*0.02;
+      const enemyAtkSpd=enemy.atkSpeed+wave*0.02;
       while(enemyHp>0){
-        const pL=(1-pAtkProg)/player.atkSpeed,eL=(1-eAtkProg)/es;
-        if(pL>eL){
-          pAtkProg+=(eL/es)*player.atkSpeed; eAtkProg-=1;
+        const playerTimeToAtk=(1-playerAtkCooldown)/player.atkSpeed,enemyTimeToAtk=(1-enemyAtkCooldown)/enemyAtkSpd;
+        if(playerTimeToAtk>enemyTimeToAtk){
+          // Enemy attacks first
+          playerAtkCooldown+=(enemyTimeToAtk/enemyAtkSpd)*player.atkSpeed; enemyAtkCooldown-=1;
           let dmg=Math.max(1,round(enemy.atk+wave*enemy.atkScaling));
-          const ct=enemy.crit+wave;
-          if(ct>0&&100*Math.random()<=ct){const cm=enemy.critDmg+wave*enemy.critDmgScaling;if(cm>1)dmg=round(dmg*cm)}
+          const enemyCritChance=enemy.crit+wave;
+          if(enemyCritChance>0&&100*Math.random()<=enemyCritChance){const enemyCritMult=enemy.critDmg+wave*enemy.critDmgScaling;if(enemyCritMult>1)dmg=round(dmg*enemyCritMult)}
           if(player.blockChance>0&&Math.random()<=player.blockChance)dmg=0;
-          playerHp-=dmg; time+=enemy.defaultAtkTime*(eL/es);
+          playerHp-=dmg; time+=enemy.defaultAtkTime*(enemyTimeToAtk/enemyAtkSpd);
         }else{
-          eAtkProg+=(pL/player.atkSpeed)*es; pAtkProg-=1;
+          // Player attacks first
+          enemyAtkCooldown+=(playerTimeToAtk/player.atkSpeed)*enemyAtkSpd; playerAtkCooldown-=1;
           let dmg=player.atk;
           if(player.crit>0&&100*Math.random()<=player.crit)dmg=round(player.atk*player.critDmg);
-          enemyHp-=dmg; time+=player.defaultAtkTime*(pL/player.atkSpeed);
+          enemyHp-=dmg; time+=player.defaultAtkTime*(playerTimeToAtk/player.atkSpeed);
         }
       }
       time+=player.defaultWalkTime/player.walkSpeed;
-      if(playerHp<1&&i2===-1)i2=w;
+      if(playerHp<1&&deathSubzone===-1)deathSubzone=sub;
     }
   }
   time/=player.gameSpeed;
-  return[wave,i2===-1?1:i2,time];
+  return[wave,deathSubzone===-1?1:deathSubzone,time];
 }
 function FullEventSim(p,e,runs=1000){
   const eventRuns=[];let avgDistance=0,avgTime=0;
@@ -328,28 +339,29 @@ function FullEventSim(p,e,runs=1000){
 function UpgradePrice(price,levels){let t=0;for(let i=1;i<=levels;i++)t+=round(price*Math.pow(1.25,i-1));return t}
 function totalUpgradeCost(upgs,upgCosts){return upgs.map((tier,ti)=>tier.reduce((s,lvl,uj)=>s+UpgradePrice(upgCosts[ti][uj],lvl||0),0))}
 function get_highest_wave_killed_in_x_hits(player,enemy,hits){return Math.floor((hits*player.atk-enemy.baseHealth)/enemy.healthScaling)}
+// Deterministic approximation of event result: returns [finalWave, finalSub, totalTime]
 function avgEvent_short(player,enemy){
-  let time=0,max_wave=1,playerHp=player.blockChance>=1?Infinity:player.health/(1-player.blockChance),remainder=0,ret1=-1,ret2=0,ret3=0;
-  for(let j=1;j<=10;j++){
-    const wtt=get_highest_wave_killed_in_x_hits(player,enemy,j);
-    for(let i=max_wave;i<=wtt;i++){
+  let time=0,currentWave=1,playerHp=player.blockChance>=1?Infinity:player.health/(1-player.blockChance),remainder=0,finalWave=-1,finalSub=0,totalTime=0;
+  for(let hitsToKill=1;hitsToKill<=10;hitsToKill++){
+    const maxWaveForHits=get_highest_wave_killed_in_x_hits(player,enemy,hitsToKill);
+    for(let wave=currentWave;wave<=maxWaveForHits;wave++){
       if(playerHp<=0)break;
-      const rh=remainder+j*5*(enemy.atkSpeed+i*0.02)/player.atkSpeed;
-      remainder=rh%1;const hits=Math.floor(rh);
-      const eA=Math.max(1,round(enemy.atk+i*enemy.atkScaling))*(1+Math.max(0,Math.min(100,enemy.crit+i)/100)*Math.max(0,enemy.critDmg+i*enemy.critDmgScaling-1));
-      playerHp-=Math.max(0,hits*eA);
+      const enemyHitsRaw=remainder+hitsToKill*5*(enemy.atkSpeed+wave*0.02)/player.atkSpeed;
+      remainder=enemyHitsRaw%1;const hits=Math.floor(enemyHitsRaw);
+      const avgEnemyDmg=Math.max(1,round(enemy.atk+wave*enemy.atkScaling))*(1+Math.max(0,Math.min(100,enemy.crit+wave)/100)*Math.max(0,enemy.critDmg+wave*enemy.critDmgScaling-1));
+      playerHp-=Math.max(0,hits*avgEnemyDmg);
       if(playerHp<=0){
-        if(ret1>-1)break;
-        const sub=5-Math.floor((hits+Math.floor(playerHp/eA))/hits*5);
-        time+=(i-max_wave+(6-sub)/5)*5*(j*player.defaultAtkTime/player.atkSpeed+player.defaultWalkTime/player.walkSpeed)/player.gameSpeed;
-        ret1=i;ret2=sub;ret3=time;break;
+        if(finalWave>-1)break;
+        const sub=5-Math.floor((hits+Math.floor(playerHp/avgEnemyDmg))/hits*5);
+        time+=(wave-currentWave+(6-sub)/5)*5*(hitsToKill*player.defaultAtkTime/player.atkSpeed+player.defaultWalkTime/player.walkSpeed)/player.gameSpeed;
+        finalWave=wave;finalSub=sub;totalTime=time;break;
       }
     }
     if(playerHp<=0)break;
-    time+=(wtt-max_wave+1)*5*(j*player.defaultAtkTime/player.atkSpeed+player.defaultWalkTime/player.walkSpeed)/player.gameSpeed;
-    max_wave=wtt+1;
+    time+=(maxWaveForHits-currentWave+1)*5*(hitsToKill*player.defaultAtkTime/player.atkSpeed+player.defaultWalkTime/player.walkSpeed)/player.gameSpeed;
+    currentWave=maxWaveForHits+1;
   }
-  return[ret1,ret2,ret3];
+  return[finalWave,finalSub,totalTime];
 }
 function GiveApproxWithUpgraded(ti,uj){
   upgrades[ti][uj]=(upgrades[ti][uj]||0)+1;
@@ -366,29 +378,33 @@ const upgradeNames=[
   ['+1% Block Chance','+5 Maximum Health','+0.10 Crit Damage -0.10 Enemy Crit Damage','+0.02 Attack Speed +0.02 Move Speed','+4 Maximum Health +4 Attack Damage','+1 Tier 4 Upgrade Caps','+1 Cap of Cap Upgrades','+10 Maximum Health +0.05 Attack Speed'],
 ];
 const upgradeNames_gem=['+10% Damage','+10% Maximum Health','+125% Event Game Speed','2x Event Currencies'];
-const prestigeUnlocked=[[0,0,0,0,1,2,2,4,8,10],[0,0,0,3,4,5,10],[1,1,2,3,4,6,8,10],[1,3,4,5,6,6,7,10]];
+const prestigeUnlocked=[[0,0,0,0,1,2,2,4,8,10],[0,0,0,1,3,5,10],[1,1,2,3,4,6,8,10],[1,1,4,5,6,6,7,10]];
 const maxLevels=[[50,50,25,25,25,25,25,10,5,40],[25,15,10,15,25,10,15],[20,20,20,20,10,10,10,40],[15,15,15,15,15,10,10,40]];
-const capUpgIdx=[7,5,5,5];
-const META_CAP=6;
+const capUpgIdx=[7,5,5,5]; // index of the "+1 Tier X Upgrade Caps" upgrade within each tier
+const CAP_OF_CAPS_IDX=6; // T4[6]: "+1 Cap of Cap Upgrades" - increases cap upgrade max levels
 function currentMaxLvl(ti,uj){
-  if(capUpgIdx[ti]===uj)return maxLevels[ti][uj]+(upgrades[3][META_CAP]||0);
-  if(!(ti===3&&uj===META_CAP))return maxLevels[ti][uj]+(upgrades[ti][capUpgIdx[ti]]||0);
+  if(capUpgIdx[ti]===uj)return maxLevels[ti][uj]+(upgrades[3][CAP_OF_CAPS_IDX]||0);
+  if(!(ti===3&&uj===CAP_OF_CAPS_IDX))return maxLevels[ti][uj]+(upgrades[ti][capUpgIdx[ti]]||0);
   return maxLevels[ti][uj];
 }
 function currentMaxLvl_gem(i){if(i<2)return 5+prestigeCount;if(i===2)return 1+Math.min(2,Math.floor(prestigeCount/5));return 1}
 function formatNumber(n){
   const abs=Math.abs(n);if(abs<1000)return String(Math.round(n));
-  const e=['','k','m','b','t'],oom=Math.min(4,Math.floor(Math.log10(abs)/3));
-  return(n/Math.pow(10,oom*3)).toFixed(2)+e[oom];
+  const suffixes=['','k','m','b','t'],oom=Math.min(4,Math.floor(Math.log10(abs)/3));
+  const val=n/Math.pow(10,oom*3);
+  const decimals=val>=100?0:val>=10?1:2;
+  return val.toFixed(decimals)+suffixes[oom];
 }
-const resourceWaveReqs=[1,5,10,15];
-function avgMult(c,m){return 1+c*(m-1)}
-function resourcesPerMinute(wd,resource,p){
-  if(!wd||wd[0]<0||wd[2]<=0)return 0;
-  const res=resource||1,adj=res===1?(5-wd[1])/5-1:0;
-  const avgWave=Math.floor((wd[0]+adj)/resourceWaveReqs[res-1]);
+const resourceWaveReqs=[1,5,10,15]; // currency A every wave, B every 5th, C every 10th, D every 15th
+// Expected value of a random multiplier: chance c (0-1) of getting multiplier m, otherwise 1x
+function expectedMultiplier(c,m){return 1+c*(m-1)}
+// simResult = [finalWave, finalSub, totalTime] from avgEvent_short
+function resourcesPerMinute(simResult,resource,p){
+  if(!simResult||simResult[0]<0||simResult[2]<=0)return 0;
+  const res=resource||1,adj=res===1?(5-simResult[1])/5-1:0;
+  const avgWave=Math.floor((simResult[0]+adj)/resourceWaveReqs[res-1]);
   if(avgWave<=0)return 0;
-  return(avgWave*avgWave+avgWave)*120/wd[2]*avgMult((p.x5money||0)/100,5)*avgMult(p.x2money||0,2);
+  return(avgWave*avgWave+avgWave)*120/simResult[2]*expectedMultiplier((p.x5money||0)/100,5)*expectedMultiplier(p.x2money||0,2);
 }
 
 // ── PERSISTENCE ──────────────────────────────────────────────
@@ -429,7 +445,7 @@ function applyImport(text){
       ||typeof s.currentResource!=='number'||s.currentResource<1||s.currentResource>4)
       throw new Error('invalid shape');
     applyStateFields(s);
-    storedApprox={};saveState();runAndRender();
+    approxCache={};saveState();runAndRender();
   }catch(_){alert('Save inválido ou corrompido.');}
 }
 
@@ -445,40 +461,40 @@ function stopHold(){
 }
 
 // ── UI STATE ─────────────────────────────────────────────────
-let currentResource=1,baseCost=[0,0,0,0],storedApprox={},cachedP=null,cachedE=null,shiftHeld=false;
+let currentResource=1,baseCost=[0,0,0,0],approxCache={},cachedP=null,cachedE=null,shiftHeld=false;
 document.addEventListener('keydown',e=>{if(e.key==='Shift')shiftHeld=true});
 document.addEventListener('keyup',  e=>{if(e.key==='Shift')shiftHeld=false});
 
-function setPrestige(val){prestigeCount=Math.max(0,parseInt(val)||0);storedApprox={};runAndRender()}
+function setPrestige(val){prestigeCount=Math.max(0,parseInt(val)||0);approxCache={};runAndRender()}
 function changePrestige(delta){
   const next=Math.max(0,prestigeCount+delta);
   if(next===prestigeCount)return;
-  prestigeCount=next;storedApprox={};runAndRender();
+  prestigeCount=next;approxCache={};runAndRender();
 }
 function cycleResource(){currentResource=(currentResource%4)+1;document.getElementById('res-num').textContent=currentResource;saveState();refreshUpgradeValues();renderHeader()}
-function setUpgrade(ti,uj,val){upgrades[ti][uj]=Math.max(0,Math.min(currentMaxLvl(ti,uj),parseInt(val)||0));storedApprox={};runAndRender()}
+function setUpgrade(ti,uj,val){upgrades[ti][uj]=Math.max(0,Math.min(currentMaxLvl(ti,uj),parseInt(val)||0));approxCache={};runAndRender()}
 function changeUpgrade(ti,uj,delta){
   const step=shiftHeld?10*delta:delta;
   const prev=upgrades[ti][uj]||0;
   const next=Math.max(0,Math.min(currentMaxLvl(ti,uj),prev+step));
   if(next===prev)return;
-  upgrades[ti][uj]=next;storedApprox={};runAndRender();
+  upgrades[ti][uj]=next;approxCache={};runAndRender();
 }
-function setGem(gi,val){gemUp[gi]=Math.max(0,Math.min(currentMaxLvl_gem(gi),parseInt(val)||0));storedApprox={};runAndRender()}
+function setGem(gi,val){gemUp[gi]=Math.max(0,Math.min(currentMaxLvl_gem(gi),parseInt(val)||0));approxCache={};runAndRender()}
 function changeGem(gi,delta){
   const step=shiftHeld?10*delta:delta;
   const prev=gemUp[gi]||0;
   const next=Math.max(0,Math.min(currentMaxLvl_gem(gi),prev+step));
   if(next===prev)return;
-  gemUp[gi]=next;storedApprox={};runAndRender();
+  gemUp[gi]=next;approxCache={};runAndRender();
 }
 
 // ── RENDER ───────────────────────────────────────────────────
 
 function renderHeader(){
   if(!cachedP)return;
-  if(!storedApprox['base'])storedApprox['base']=GiveApproxWithUpgraded(0,7);
-  const ab=storedApprox['base'];
+  if(!approxCache['base'])approxCache['base']=GiveApproxWithUpgraded(0,7);
+  const ab=approxCache['base'];
   const rpm=resourcesPerMinute(ab,currentResource,cachedP);
   document.getElementById('hs-wave').textContent=ab[0]>0?`${ab[0]}-${ab[1]}`:'—';
   document.getElementById('hs-time').textContent=ab[2]>0?`${ab[2].toFixed(0)}s`:'—';
@@ -528,6 +544,19 @@ function buildGemsDOM(){
     cont.appendChild(row);
   }
 }
+function renderPrestigeMilestone(){
+  const el=document.getElementById('pres-milestone');
+  // Count upgrades unlocked at next prestige levels
+  let nextP=-1,unlockCount=0;
+  for(let ti=0;ti<4;ti++)for(let uj=0;uj<prestigeUnlocked[ti].length;uj++){
+    const req=prestigeUnlocked[ti][uj];
+    if(req>prestigeCount&&(nextP===-1||req<nextP)){nextP=req;unlockCount=0}
+    if(req===nextP)unlockCount++;
+  }
+  if(nextP===-1){el.textContent='All upgrades unlocked.';return}
+  const wave=nextP*5+5;
+  el.innerHTML=`Next unlock: <b>Prestige ${nextP}</b> <span class="pres-ms-wave">(Wave ${wave})</span> - ${unlockCount} upgrade${unlockCount>1?'s':''}`;
+}
 function refreshGemValues(){
   for(let i=0;i<upgradeNames_gem.length;i++){
     const lvl=gemUp[i]||0,maxL=currentMaxLvl_gem(i);
@@ -557,7 +586,7 @@ function buildUpgradesDOM(){
         `</div>`+
         `<div class="upg-data">`+
           `<span class="upg-cost" id="upg-cost-${ti}-${uj}"></span>`+
-          `<span class="upg-name">${upgradeNames[ti][uj]}</span>`+
+          `<span class="upg-name" id="upg-name-${ti}-${uj}">${upgradeNames[ti][uj]}</span>`+
           `<span class="upg-gain-val" id="upg-gain-${ti}-${uj}"></span>`+
         `</div>`;
       sec.appendChild(row);
@@ -567,8 +596,8 @@ function buildUpgradesDOM(){
 }
 
 function refreshUpgradeValues(){
-  if(!storedApprox['base'])storedApprox['base']=GiveApproxWithUpgraded(0,7);
-  const baseRPM=resourcesPerMinute(storedApprox['base'],currentResource,cachedP||playerStatsBase);
+  if(!approxCache['base'])approxCache['base']=GiveApproxWithUpgraded(0,7);
+  const baseRPM=resourcesPerMinute(approxCache['base'],currentResource,cachedP||playerStatsBase);
 
   // First pass: collect all gains
   const allGains=[];
@@ -579,8 +608,8 @@ function refreshUpgradeValues(){
       let gain=0;
       if(!locked&&cachedP&&lvl<maxL){
         const key=`${ti}_${uj}`;
-        if(!storedApprox[key])storedApprox[key]=GiveApproxWithUpgraded(ti,uj);
-        const ad=storedApprox[key];
+        if(!approxCache[key])approxCache[key]=GiveApproxWithUpgraded(ti,uj);
+        const ad=approxCache[key];
         if(ad[0]>0)gain=resourcesPerMinute(ad,currentResource,cachedP)-baseRPM;
       }
       allGains.push({ti,uj,gain,locked,lvl,maxL,presReq});
@@ -599,7 +628,8 @@ function refreshUpgradeValues(){
     document.getElementById(`upg-max-${ti}-${uj}`).textContent=`/${maxL}`;
     document.getElementById(`upg-bm-${ti}-${uj}`).disabled=lvl<=0||locked;
     document.getElementById(`upg-bp-${ti}-${uj}`).disabled=lvl>=maxL||locked;
-    document.getElementById(`upg-cost-${ti}-${uj}`).textContent=locked?`P${presReq}`:formatNumber(costs[ti][uj]*Math.pow(1.25,lvl));
+    document.getElementById(`upg-name-${ti}-${uj}`).textContent=locked?`Unlocks at Prestige ${presReq}`:upgradeNames[ti][uj];
+    document.getElementById(`upg-cost-${ti}-${uj}`).textContent=locked?'':formatNumber(costs[ti][uj]*Math.pow(1.25,lvl));
     const gainStr=(!locked&&gain>0)?gain.toFixed(1):'';
     document.getElementById(`upg-gain-${ti}-${uj}`).textContent=gainStr;
     const pct=gain>0?Math.max(4,Math.round(gain/maxGain*100)):0;
@@ -631,7 +661,7 @@ function renderSimResults(eventRuns,avgDistance,avgTime,p){
   const n=eventRuns.length;
   const worst=eventRuns[0],best=eventRuns[n-1];
   const avgWave=Math.floor(avgDistance);
-  const mats=calcMaterials(avgWave-1,p);
+  const currencies=calcCurrenciesPerRun(avgWave-1,p);
 
   document.getElementById('sim-results-panel').innerHTML=
     `<div class="ptitle">Simulation — 1000 runs</div>`+
@@ -641,13 +671,13 @@ function renderSimResults(eventRuns,avgDistance,avgTime,p){
         `<div class="big-lbl">Avg Wave</div>`+
       `</div>`+
       `<div class="mstat"><div class="mstat-val">${avgTime.toFixed(0)}s</div><div class="mstat-lbl">Avg Time</div></div>`+
-      `<div class="mstat"><div class="mstat-val">${formatNumber(mats[0])}</div><div class="mstat-lbl">Coins/Run</div></div>`+
-      `<div class="mstat"><div class="mstat-val">${formatNumber(mats[1])}</div><div class="mstat-lbl">Mat2/Run</div></div>`+
+      `<div class="mstat"><div class="mstat-val">${formatNumber(currencies[0])}</div><div class="mstat-lbl">Res1/Run</div></div>`+
+      `<div class="mstat"><div class="mstat-val">${formatNumber(currencies[1])}</div><div class="mstat-lbl">Res2/Run</div></div>`+
     `</div>`+
     `<div class="sim-sub">`+
       `<span>worst <b>${worst[0]}-${worst[1]}</b> ${worst[2].toFixed(0)}s</span>`+
       `<span>best <b>${best[0]}-${best[1]}</b> ${best[2].toFixed(0)}s</span>`+
-      `<span>mat3 <b>${formatNumber(mats[2])}</b> mat4 <b>${formatNumber(mats[3])}</b></span>`+
+      `<span>res3 <b>${formatNumber(currencies[2])}</b> res4 <b>${formatNumber(currencies[3])}</b></span>`+
     `</div>`;
 
   // Wave chart
@@ -673,8 +703,8 @@ function parseShortNum(s){
   return parseFloat(m[1])*({'k':1e3,'m':1e6,'b':1e9,'t':1e12,'':1}[m[2]]||1);
 }
 function maxLvlFromLevels(ti,uj,lv){
-  if(capUpgIdx[ti]===uj)return maxLevels[ti][uj]+(lv[3][META_CAP]||0);
-  if(!(ti===3&&uj===META_CAP))return maxLevels[ti][uj]+(lv[ti][capUpgIdx[ti]]||0);
+  if(capUpgIdx[ti]===uj)return maxLevels[ti][uj]+(lv[3][CAP_OF_CAPS_IDX]||0);
+  if(!(ti===3&&uj===CAP_OF_CAPS_IDX))return maxLevels[ti][uj]+(lv[ti][capUpgIdx[ti]]||0);
   return maxLevels[ti][uj];
 }
 function budgetPlan(){
@@ -746,6 +776,7 @@ function runAndRender(){
   renderStats(p,e);
   refreshGemValues();
   refreshUpgradeValues();
+  renderPrestigeMilestone();
   document.getElementById('pres-input').value=prestigeCount;
   document.getElementById('res-num').textContent=currentResource;
   saveState();
