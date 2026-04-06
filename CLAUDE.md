@@ -47,4 +47,4 @@ Search by function name - these are the stable anchors.
 [Official wiki](https://shminer.miraheze.org/wiki/Events), local copy at `events.md`.
 
 ## Roadmap
-Tracked in GitHub Issues. Key items: #1 visual overhaul, #2 gem budget planner, #3 rewards tracker, #4 mobile layout.
+Tracked in GitHub Issues.
