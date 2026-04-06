@@ -611,7 +611,9 @@ function refreshUpgradeValues(){
         const ad=approxCache[key];
         if(ad[0]>0)gain=resourcesPerMinute(ad,currentResource,cachedP)-baseRPM;
       }
-      allGains.push({ti,uj,gain,locked,lvl,maxL,presReq});
+      const upgCost=locked||lvl>=maxL?0:costs[ti][uj]*Math.pow(1.25,lvl);
+      const efficiency=upgCost>0&&gain>0?gain/upgCost:0;
+      allGains.push({ti,uj,gain,efficiency,upgCost,locked,lvl,maxL,presReq});
     }
   }
 
@@ -639,7 +641,7 @@ function refreshUpgradeValues(){
   const available=allGains.filter(g=>!g.locked&&g.lvl<g.maxL);
   const picks=[];
   for(let ti=0;ti<4;ti++){
-    const tierUpgrades=available.filter(g=>g.ti===ti).sort((a,b)=>b.gain-a.gain);
+    const tierUpgrades=available.filter(g=>g.ti===ti).sort((a,b)=>b.efficiency-a.efficiency||b.gain-a.gain);
     if(tierUpgrades.length>0)picks.push(tierUpgrades[0]);
   }
   picks.sort((a,b)=>a.ti-b.ti);
