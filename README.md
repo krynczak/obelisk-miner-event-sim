@@ -1,4 +1,4 @@
-# Czak Event Sim
+# Shminer Event Sim
 
 Web-based event simulator for [Shminer](https://shminer.miraheze.org/wiki/Events).
 
