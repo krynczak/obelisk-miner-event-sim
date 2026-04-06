@@ -358,11 +358,20 @@ function avgEvent_short(player,enemy){
   }
   return[finalWave,finalSub,totalTime];
 }
+const GAIN_SIM_RUNS=100;
+function quickSim(p,e){
+  let totalWave=0,totalSub=0,totalTime=0;
+  for(let i=0;i<GAIN_SIM_RUNS;i++){
+    const r=eventTest(p,e);
+    totalWave+=r[0];totalSub+=r[1];totalTime+=r[2];
+  }
+  return[totalWave/GAIN_SIM_RUNS,Math.round(totalSub/GAIN_SIM_RUNS),totalTime/GAIN_SIM_RUNS];
+}
 function GiveApproxWithUpgraded(ti,uj){
   upgrades[ti][uj]=(upgrades[ti][uj]||0)+1;
   const{p,e}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
   upgrades[ti][uj]--;
-  return avgEvent_short(p,e);
+  return quickSim(p,e);
 }
 
 // ── UI DATA ──────────────────────────────────────────────────
