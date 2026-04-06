@@ -27,6 +27,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 /* ── Header ─────────────────────────────── */
 .header{display:flex;align-items:center;gap:20px;padding:9px 14px;background:var(--s1);border-bottom:1px solid var(--b1);position:sticky;top:0;z-index:10;flex-wrap:wrap}
 .brand{font-family:'Chakra Petch',sans-serif;font-size:13px;font-weight:700;color:var(--acc);letter-spacing:.06em;white-space:nowrap}
+.version{font-size:9px;font-weight:400;color:var(--t3);letter-spacing:.08em}
 .header-stats{display:flex;gap:28px;flex:1}
 .hstat{display:flex;flex-direction:column;gap:1px}
 .hstat-lbl{font-family:'Chakra Petch',sans-serif;font-size:8px;letter-spacing:.15em;text-transform:uppercase;color:var(--t3)}
@@ -143,7 +144,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 <body>
 
 <header class="header">
-  <div class="brand">⛏ OBELISK MINER EVENT SIM</div>
+  <div class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v1.0.0</span></div>
   <div class="header-stats">
     <div class="hstat"><span class="hstat-lbl">Avg Wave</span><span class="hstat-val" id="hs-wave">—</span></div>
     <div class="hstat"><span class="hstat-lbl">Avg Time</span><span class="hstat-val" id="hs-time">—</span></div>
