@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Shminer Event Sim</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #111009;
+  --s1:      #1a1714;
+  --s2:      #221e19;
+  --s3:      #2d2820;
+  --b1:      #3a3028;
+  --b2:      #5a4838;
+  --acc:     #e8960a;
+  --acc-dim: #9a6308;
+  --acc-glow:rgba(232,150,10,0.10);
+  --t1:      #f0e6d8;
+  --t2:      #a09080;
+  --t3:      #5a5040;
+  --gain:    #6cba6a;
+  --red:     #e05050;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;font-size:12px;-webkit-font-smoothing:antialiased}
+
+/* ── Header ─────────────────────────────── */
+.header{display:flex;align-items:center;gap:20px;padding:9px 14px;background:var(--s1);border-bottom:1px solid var(--b1);position:sticky;top:0;z-index:10;flex-wrap:wrap}
+.brand{font-family:'Chakra Petch',sans-serif;font-size:13px;font-weight:700;color:var(--acc);letter-spacing:.06em;white-space:nowrap}
+.header-stats{display:flex;gap:28px;flex:1}
+.hstat{display:flex;flex-direction:column;gap:1px}
+.hstat-lbl{font-family:'Chakra Petch',sans-serif;font-size:8px;letter-spacing:.15em;text-transform:uppercase;color:var(--t3)}
+.hstat-val{font-family:'Chakra Petch',sans-serif;font-size:16px;font-weight:600;color:var(--t1);font-variant-numeric:tabular-nums}
+.res-btn{background:transparent;border:1px solid var(--b2);color:var(--t2);font-family:'Chakra Petch',sans-serif;font-size:9px;letter-spacing:.1em;padding:5px 12px;cursor:pointer;transition:all .15s;text-transform:uppercase;white-space:nowrap}
+.res-btn:hover{border-color:var(--acc);color:var(--acc)}
+
+/* ── Layout ──────────────────────────────── */
+.layout{display:grid;grid-template-columns:196px 1fr 430px;gap:10px;padding:10px;align-items:start}
+
+/* ── Panel ───────────────────────────────── */
+.panel{background:var(--s2);border:1px solid var(--b1);padding:10px;margin-bottom:8px}
+.panel:last-child{margin-bottom:0}
+.ptitle{font-family:'Chakra Petch',sans-serif;font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid var(--b1)}
+
+/* ── Stat rows ───────────────────────────── */
+.srow{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--b1);font-size:11px}
+.srow:last-child{border-bottom:none}
+.sk{color:var(--t2)}
+.sv{color:var(--t1);font-variant-numeric:tabular-nums}
+
+/* ── Sim results ─────────────────────────── */
+.sim-grid{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:10px;align-items:center}
+.avg-wave{text-align:center;padding:4px 16px 4px 4px;border-right:1px solid var(--b1)}
+.big-n{font-family:'Chakra Petch',sans-serif;font-size:48px;font-weight:700;color:var(--acc);line-height:1;letter-spacing:-.02em}
+.big-lbl{font-family:'Chakra Petch',sans-serif;font-size:8px;letter-spacing:.15em;text-transform:uppercase;color:var(--t3);margin-top:2px}
+.mstat{padding:2px 0}
+.mstat-val{font-family:'Chakra Petch',sans-serif;font-size:16px;font-weight:600;color:var(--t1);font-variant-numeric:tabular-nums}
+.mstat-lbl{font-family:'Chakra Petch',sans-serif;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);margin-top:1px}
+.sim-sub{margin-top:8px;padding-top:8px;border-top:1px solid var(--b1);display:flex;gap:16px;font-size:10px;color:var(--t2)}
+.sim-sub b{color:var(--t1)}
+.sim-loading{color:var(--t3);font-size:11px;padding:8px 0;font-family:'Chakra Petch',sans-serif;letter-spacing:.1em}
+
+/* ── Top picks ───────────────────────────── */
+.pick{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--s3);border:1px solid var(--b1);margin-bottom:5px;position:relative;overflow:hidden;transition:border-color .15s}
+.pick:hover{border-color:var(--b2)}
+.pick.best{border-left:3px solid var(--acc)}
+.pick-rank{font-family:'Chakra Petch',sans-serif;font-size:16px;font-weight:700;color:var(--t3);width:20px;flex-shrink:0;line-height:1}
+.pick.best .pick-rank{color:var(--acc)}
+.pick-body{flex:1;min-width:0}
+.pick-name{font-size:11px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pick-meta{font-size:9px;color:var(--t2);margin-top:2px}
+.pick-right{text-align:right;flex-shrink:0}
+.pick-gain{font-family:'Chakra Petch',sans-serif;font-size:14px;font-weight:600;color:var(--gain)}
+.pick-cost{font-size:9px;color:var(--t3);margin-top:1px}
+.picks-empty{font-size:10px;color:var(--t3);padding:4px 0}
+
+/* ── Wave chart ──────────────────────────── */
+.wrow{display:grid;grid-template-columns:34px 1fr 38px;align-items:center;gap:5px;margin-bottom:3px;font-size:10px}
+.wlbl{color:var(--t2);text-align:right;font-variant-numeric:tabular-nums}
+.wtrack{height:11px;background:var(--s1);border-radius:1px;overflow:hidden}
+.wfill{height:100%;background:var(--s3);transition:width .4s ease}
+.wfill.peak{background:var(--acc)}
+.wpct{color:var(--t2);font-variant-numeric:tabular-nums;font-size:9px}
+
+/* ── Upgrades ────────────────────────────── */
+.tier-hdr{font-family:'Chakra Petch',sans-serif;font-size:9px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--t3);padding:6px 0 3px;border-bottom:1px solid var(--b1);margin-bottom:2px}
+.tier-hdr:first-child{padding-top:2px}
+.upg-row{position:relative;display:flex;align-items:center;height:22px;margin-bottom:1px;background:var(--s1);border:1px solid transparent;overflow:hidden;transition:border-color .1s}
+.upg-row:hover{border-color:var(--b1)}
+.upg-row.locked{opacity:.4}
+.gain-fill{position:absolute;left:0;top:0;bottom:0;background:var(--acc-glow);pointer-events:none;transition:width .35s ease}
+.upg-ctrl{display:flex;align-items:center;gap:1px;flex-shrink:0;position:relative;z-index:1;padding:0 3px}
+.ubtn{width:14px;height:14px;background:var(--s3);border:1px solid var(--b1);color:var(--t1);font-size:10px;line-height:12px;cursor:pointer;padding:0;text-align:center;flex-shrink:0;transition:background .1s;font-family:'Space Mono',monospace}
+.ubtn:hover:not(:disabled){background:var(--b2)}
+.ubtn:disabled{opacity:.2;cursor:default}
+.upg-input,.num-inp{width:28px;height:14px;background:var(--bg);border:1px solid var(--b1);color:var(--t1);font-family:'Space Mono',monospace;font-size:10px;text-align:right;padding:0 2px;-moz-appearance:textfield}
+.upg-input::-webkit-outer-spin-button,.upg-input::-webkit-inner-spin-button,
+.num-inp::-webkit-outer-spin-button,.num-inp::-webkit-inner-spin-button{-webkit-appearance:none}
+.upg-input:focus,.num-inp:focus{outline:1px solid var(--acc-dim);background:var(--s3)}
+.upg-input:disabled{opacity:.3}
+.upg-maxl{font-size:9px;color:var(--t3);width:22px;position:relative;z-index:1}
+.upg-data{display:flex;align-items:center;flex:1;min-width:0;position:relative;z-index:1;gap:3px}
+.upg-cost{font-size:9px;color:var(--t2);width:32px;flex-shrink:0;text-align:right}
+.upg-name{flex:1;font-size:10px;color:var(--t1);white-space:nowrap;overflow:hidden;padding:0 2px}
+.upg-gain-val{font-size:10px;color:var(--gain);width:44px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;padding-right:4px}
+
+/* ── Prestige + gems ─────────────────────── */
+.pres-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.pres-lbl{font-family:'Chakra Petch',sans-serif;font-size:10px;color:var(--t2);flex:1}
+.num-inp{width:36px;height:18px;font-size:11px}
+
+/* ── Costs ───────────────────────────────── */
+.cost-blk{margin-bottom:7px;padding-bottom:7px;border-bottom:1px solid var(--b1)}
+.cost-blk:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.cost-blk-lbl{font-family:'Chakra Petch',sans-serif;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);margin-bottom:2px}
+.cost-vals{font-size:11px;color:var(--t1);font-variant-numeric:tabular-nums}
+.btn-sec{background:transparent;border:1px solid var(--b2);color:var(--t2);font-family:'Chakra Petch',sans-serif;font-size:9px;letter-spacing:.08em;padding:5px 0;cursor:pointer;transition:all .15s;margin-top:8px;width:100%;text-transform:uppercase}
+.btn-sec:hover{border-color:var(--acc-dim);color:var(--acc)}
+
+/* ── Scrollbar ───────────────────────────── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+
+/* ── Flicker fix ─────────────────────────── */
+#sim-results-panel{transition:opacity .12s}
+#sim-results-panel.simulating{opacity:.35;pointer-events:none}
+
+/* ── Budget planner ──────────────────────── */
+.bud-inputs{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-bottom:8px}
+.bud-inp-grp{display:flex;flex-direction:column;gap:3px}
+.bud-inp-lbl{font-family:'Chakra Petch',sans-serif;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--t3)}
+.bud-inp{width:100%;height:22px;background:var(--bg);border:1px solid var(--b1);color:var(--t1);font-family:'Space Mono',monospace;font-size:10px;padding:0 5px}
+.bud-inp:focus{outline:1px solid var(--acc-dim);background:var(--s3)}
+.btn-run{background:var(--acc);border:none;color:var(--bg);font-family:'Chakra Petch',sans-serif;font-size:9px;font-weight:700;letter-spacing:.12em;padding:7px 0;cursor:pointer;margin-bottom:8px;width:100%;text-transform:uppercase;transition:opacity .15s}
+.btn-run:hover{opacity:.85}
+.bud-row{padding:5px 8px;background:var(--s3);border:1px solid var(--b1);margin-bottom:3px}
+.bud-name{font-size:10px;color:var(--t1);margin-bottom:1px}
+.bud-detail{font-size:9px;color:var(--t2)}
+.bud-remaining{font-size:9px;color:var(--t2);padding-top:6px;border-top:1px solid var(--b1);margin-top:4px;display:flex;gap:12px;flex-wrap:wrap}
+.bud-remaining b{color:var(--t1)}
+.bud-empty{font-size:10px;color:var(--t3);padding:4px 0}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="brand">⛏ SHMINER EVENT SIM</div>
+  <div class="header-stats">
+    <div class="hstat"><span class="hstat-lbl">Avg Wave</span><span class="hstat-val" id="hs-wave">—</span></div>
+    <div class="hstat"><span class="hstat-lbl">Avg Time</span><span class="hstat-val" id="hs-time">—</span></div>
+    <div class="hstat"><span class="hstat-lbl">Resource <span id="res-num">1</span>/min</span><span class="hstat-val" id="hs-rpm">—</span></div>
+  </div>
+  <button class="res-btn" onclick="cycleResource()">Cycle Resource ▸</button>
+</header>
+
+<div class="layout">
+
+  <!-- LEFT -->
+  <div>
+    <div class="panel">
+      <div class="ptitle">Player</div>
+      <div id="player-stats"></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">Enemy</div>
+      <div id="enemy-stats"></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">Costs</div>
+      <div id="cost-display"></div>
+      <button class="btn-sec" onclick="setBaseCost()">Set current as base</button>
+    </div>
+    <div class="panel">
+      <div class="ptitle">Prestige &amp; Gems</div>
+      <div class="pres-row">
+        <span class="pres-lbl">Prestiges</span>
+        <button class="ubtn" tabindex="-1" onclick="changePrestige(-1)">-</button>
+        <input id="pres-input" class="num-inp" type="number" min="0" onchange="setPrestige(this.value)" onfocus="this.select()">
+        <button class="ubtn" tabindex="-1" onclick="changePrestige(1)">+</button>
+      </div>
+      <div id="gem-upgrades"></div>
+    </div>
+  </div>
+
+  <!-- CENTER -->
+  <div>
+    <div class="panel" id="sim-results-panel">
+      <div class="ptitle">Simulation — 1000 runs</div>
+      <div class="sim-loading">Simulating…</div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">Next Buy — sorted by resource/min gain</div>
+      <div id="top-picks"><div class="picks-empty">Calculating…</div></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">Wave Distribution</div>
+      <div id="wave-chart"></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">Budget Planner</div>
+      <div class="bud-inputs">
+        <div class="bud-inp-grp"><label class="bud-inp-lbl">Res 1</label><input id="bud-inp-1" class="bud-inp" placeholder="4.21m" onfocus="this.select()"></div>
+        <div class="bud-inp-grp"><label class="bud-inp-lbl">Res 2</label><input id="bud-inp-2" class="bud-inp" placeholder="168k" onfocus="this.select()"></div>
+        <div class="bud-inp-grp"><label class="bud-inp-lbl">Res 3</label><input id="bud-inp-3" class="bud-inp" placeholder="13.9k" onfocus="this.select()"></div>
+        <div class="bud-inp-grp"><label class="bud-inp-lbl">Res 4</label><input id="bud-inp-4" class="bud-inp" placeholder="15.6k" onfocus="this.select()"></div>
+      </div>
+      <button class="btn-run" onclick="budgetPlan()">Calculate Buy Order</button>
+      <div id="budget-results"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div id="upgrades-col"></div>
+
+</div>
+
+<script>
+// ============================================================
+//  GAME LOGIC
+// ============================================================
+let gemUp = [0,0,0,0];
+let prestigeCount = 0;
+let upgrades = [
+  [0,0,0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0],
+];
+const costs = [
+  [5,6,8,10,12,20,75,2500,25000,5000],
+  [5,8,12,20,40,500,650],
+  [5,8,12,18,30,250,300,125],
+  [10,12,15,20,50,250,500,150],
+];
+function round(n,precision=0){return parseFloat(n.toFixed(precision))}
+function modifyStat(stat,amount,target){target[stat]+=amount}
+const upgradeInstructions=[
+  [
+    (j,p,e)=>modifyStat('atk',j,p),
+    (j,p,e)=>modifyStat('health',2*j,p),
+    (j,p,e)=>modifyStat('atkSpeed',0.02*j,p),
+    (j,p,e)=>modifyStat('walkSpeed',0.03*j,p),
+    (j,p,e)=>modifyStat('gameSpeed',0.03*j,p),
+    (j,p,e)=>{modifyStat('crit',j,p);modifyStat('critDmg',0.1*j,p)},
+    (j,p,e)=>{modifyStat('atk',j,p);modifyStat('health',2*j,p)},
+    (j,p,e)=>{},
+    (j,p,e)=>modifyStat('prestigeBonusScale',0.01*j,p),
+    (j,p,e)=>{modifyStat('health',3*j,p);modifyStat('atk',3*j,p)},
+  ],
+  [
+    (j,p,e)=>modifyStat('health',3*j,p),
+    (j,p,e)=>modifyStat('atkSpeed',-0.02*j,e),
+    (j,p,e)=>modifyStat('atk',-j,e),
+    (j,p,e)=>{modifyStat('crit',-j,e);modifyStat('critDmg',-0.10*j,e)},
+    (j,p,e)=>{modifyStat('atk',j,p);modifyStat('atkSpeed',0.01*j,p)},
+    (j,p,e)=>{},
+    (j,p,e)=>modifyStat('prestigeBonusScale',0.02*j,p),
+  ],
+  [
+    (j,p,e)=>modifyStat('atk',2*j,p),
+    (j,p,e)=>modifyStat('atkSpeed',0.02*j,p),
+    (j,p,e)=>modifyStat('crit',j,p),
+    (j,p,e)=>modifyStat('gameSpeed',0.05*j,p),
+    (j,p,e)=>{modifyStat('atk',3*j,p);modifyStat('health',3*j,p)},
+    (j,p,e)=>{},
+    (j,p,e)=>modifyStat('x5money',3*j,p),
+    (j,p,e)=>{modifyStat('health',5*j,p);modifyStat('atkSpeed',0.03*j,p)},
+  ],
+  [
+    (j,p,e)=>modifyStat('blockChance',0.01*j,p),
+    (j,p,e)=>modifyStat('health',5*j,p),
+    (j,p,e)=>{modifyStat('critDmg',0.1*j,p);modifyStat('critDmg',-0.1*j,e)},
+    (j,p,e)=>{modifyStat('atkSpeed',0.02*j,p);modifyStat('walkSpeed',0.02*j,p)},
+    (j,p,e)=>{modifyStat('atk',4*j,p);modifyStat('health',4*j,p)},
+    (j,p,e)=>{},
+    (j,p,e)=>{},
+    (j,p,e)=>{modifyStat('health',10*j,p);modifyStat('atkSpeed',0.05*j,p)},
+  ],
+];
+const playerStatsBase={defaultAtkTime:2,defaultWalkTime:4,walkSpeed:1,atkSpeed:1,health:100,atk:10,crit:0,critDmg:2,blockChance:0,gameSpeed:1,prestigeBonusScale:0.1,x2money:0,x5money:0};
+const enemyStatsBase={defaultAtkTime:2,atkSpeed:0.8,baseHealth:4,healthScaling:7,atk:2.5,atkScaling:0.6,crit:0,critDmg:1,critDmgScaling:0.05};
+
+function parseUpgrades(upgs,basePlayer,baseEnemy,prestiges,gems){
+  const p=Object.assign({},basePlayer),e=Object.assign({},baseEnemy);
+  for(let i=0;i<upgs.length;i++) for(let j=0;j<upgs[i].length;j++) upgradeInstructions[i][j](upgs[i][j]||0,p,e);
+  p.atk   =round(p.atk   *(1+p.prestigeBonusScale*prestiges)*(1+0.1*gems[0]));
+  p.health=round(p.health*(1+p.prestigeBonusScale*prestiges)*(1+0.1*gems[1]));
+  p.gameSpeed+=gems[2]*1.25;
+  p.x2money+=gems[3];
+  return{p,e};
+}
+function calcMaterials(wave,p){
+  const m=(1+(p.x2money||0))*(1+4*((p.x5money||0)/100));
+  const w1=wave,w5=Math.floor(wave/5),w10=Math.floor(wave/10),w15=Math.floor(wave/15);
+  return[(w1*w1+w1)/2*m,(w5*w5+w5)/2*m,(w10*w10+w10)/2*m,(w15*w15+w15)/2*m];
+}
+const MAX_WAVE=2000;
+function eventTest(player,enemy){
+  let playerHp=player.health,pAtkProg=0,eAtkProg=0,time=0,wave=0,i2=-1;
+  while(playerHp>0&&wave<MAX_WAVE){
+    wave++;
+    for(let w=5;w>=1;w--){
+      if(playerHp<=0)break;
+      let enemyHp=enemy.baseHealth+enemy.healthScaling*wave;
+      const es=enemy.atkSpeed+wave*0.02;
+      while(enemyHp>0){
+        const pL=(1-pAtkProg)/player.atkSpeed,eL=(1-eAtkProg)/es;
+        if(pL>eL){
+          pAtkProg+=(eL/es)*player.atkSpeed; eAtkProg-=1;
+          let dmg=Math.max(1,round(enemy.atk+wave*enemy.atkScaling));
+          const ct=enemy.crit+wave;
+          if(ct>0&&100*Math.random()<=ct){const cm=enemy.critDmg+wave*enemy.critDmgScaling;if(cm>1)dmg=round(dmg*cm)}
+          if(player.blockChance>0&&Math.random()<=player.blockChance)dmg=0;
+          playerHp-=dmg; time+=enemy.defaultAtkTime*(eL/es);
+        }else{
+          eAtkProg+=(pL/player.atkSpeed)*es; pAtkProg-=1;
+          let dmg=player.atk;
+          if(player.crit>0&&100*Math.random()<=player.crit)dmg=round(player.atk*player.critDmg);
+          enemyHp-=dmg; time+=player.defaultAtkTime*(pL/player.atkSpeed);
+        }
+      }
+      time+=player.defaultWalkTime/player.walkSpeed;
+      if(playerHp<1&&i2===-1)i2=w;
+    }
+  }
+  time/=player.gameSpeed;
+  return[wave,i2===-1?1:i2,time];
+}
+function FullEventSim(p,e,runs=1000){
+  const eventRuns=[];let avgDistance=0,avgTime=0;
+  for(let i=0;i<runs;i++){const r=eventTest(p,e);eventRuns.push(r);avgDistance+=r[0]+1-r[1]*0.2;avgTime+=r[2]}
+  eventRuns.sort((a,b)=>(a[0]+1-a[1]*.2)-(b[0]+1-b[1]*.2));
+  return{eventRuns,avgDistance:avgDistance/runs,avgTime:avgTime/runs};
+}
+function UpgradePrice(price,levels){let t=0;for(let i=1;i<=levels;i++)t+=round(price*Math.pow(1.25,i-1));return t}
+function totalUpgradeCost(upgs,upgCosts){return upgs.map((tier,ti)=>tier.reduce((s,lvl,uj)=>s+UpgradePrice(upgCosts[ti][uj],lvl||0),0))}
+function get_highest_wave_killed_in_x_hits(player,enemy,hits){return Math.floor((hits*player.atk-enemy.baseHealth)/enemy.healthScaling)}
+function avgEvent_short(player,enemy){
+  let time=0,max_wave=1,playerHp=player.blockChance>=1?Infinity:player.health/(1-player.blockChance),remainder=0,ret1=-1,ret2=0,ret3=0;
+  for(let j=1;j<=10;j++){
+    const wtt=get_highest_wave_killed_in_x_hits(player,enemy,j);
+    for(let i=max_wave;i<=wtt;i++){
+      if(playerHp<=0)break;
+      const rh=remainder+j*5*(enemy.atkSpeed+i*0.02)/player.atkSpeed;
+      remainder=rh%1;const hits=Math.floor(rh);
+      const eA=Math.max(1,round(enemy.atk+i*enemy.atkScaling))*(1+Math.max(0,Math.min(100,enemy.crit+i)/100)*Math.max(0,enemy.critDmg+i*enemy.critDmgScaling-1));
+      playerHp-=Math.max(0,hits*eA);
+      if(playerHp<=0){
+        if(ret1>-1)break;
+        const sub=5-Math.floor((hits+Math.floor(playerHp/eA))/hits*5);
+        time+=(i-max_wave+(6-sub)/5)*5*(j*player.defaultAtkTime/player.atkSpeed+player.defaultWalkTime/player.walkSpeed)/player.gameSpeed;
+        ret1=i;ret2=sub;ret3=time;break;
+      }
+    }
+    if(playerHp<=0)break;
+    time+=(wtt-max_wave+1)*5*(j*player.defaultAtkTime/player.atkSpeed+player.defaultWalkTime/player.walkSpeed)/player.gameSpeed;
+    max_wave=wtt+1;
+  }
+  return[ret1,ret2,ret3];
+}
+function GiveApproxWithUpgraded(ti,uj){
+  upgrades[ti][uj]=(upgrades[ti][uj]||0)+1;
+  const{p,e}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
+  upgrades[ti][uj]--;
+  return avgEvent_short(p,e);
+}
+
+// ── UI DATA ──────────────────────────────────────────────────
+const upgradeNames=[
+  ['+1 Atk Dmg','+2 Max Hp','+0.02 Atk Spd','+0.03 Move Spd','+3% Event Spd','+1% Crit +0.10 CritDmg','+1 Atk +2 Hp','+1 T1 Cap','+1% Prestige Bonus','+3 Atk +3 Hp'],
+  ['+3 Max Hp','-0.02 Enemy Atk Spd','-1 Enemy Atk Dmg','-1% E.Crit -0.10 E.CritDmg','+1 Atk +0.01 AtkSpd','+1 T2 Cap','+2% Prestige Bonus'],
+  ['+2 Atk Dmg','+0.02 Atk Spd','+1% Crit','+5% Event Spd','+3 Atk +3 Hp','+1 T3 Cap','+3% 5x Drop','+5 Hp +0.03 AtkSpd'],
+  ['+1% Block','+5 Max Hp','+0.10 CritDmg -0.10 E.CritDmg','+0.02 Atk+Move Spd','+4 Atk +4 Hp','+1 T4 Cap','+1 Meta Cap','+10 Hp +0.05 AtkSpd'],
+];
+const upgradeNames_gem=['+10% Dmg','+10% Max Hp','+125% Event Spd','2x Currencies'];
+const prestigeUnlocked=[[0,0,0,0,1,2,2,4,8,10],[0,0,0,3,4,5,10],[1,1,2,3,4,6,8,10],[1,3,4,5,6,6,7,10]];
+const maxLevels=[[50,50,25,25,25,25,25,10,5,40],[25,15,10,15,25,10,15],[20,20,20,20,10,10,10,40],[15,15,15,15,15,10,10,40]];
+const capUpgIdx=[7,5,5,5];
+const META_CAP=6;
+function currentMaxLvl(ti,uj){
+  if(capUpgIdx[ti]===uj)return maxLevels[ti][uj]+(upgrades[3][META_CAP]||0);
+  if(!(ti===3&&uj===META_CAP))return maxLevels[ti][uj]+(upgrades[ti][capUpgIdx[ti]]||0);
+  return maxLevels[ti][uj];
+}
+function currentMaxLvl_gem(i){if(i<2)return 5+prestigeCount;if(i===2)return 1+Math.min(2,Math.floor(prestigeCount/5));return 1}
+function formatNumber(n){
+  const abs=Math.abs(n);if(abs<1000)return String(Math.round(n));
+  const e=['','k','m','b','t'],oom=Math.min(4,Math.floor(Math.log10(abs)/3));
+  return(n/Math.pow(10,oom*3)).toFixed(2)+e[oom];
+}
+const resourceWaveReqs=[1,5,10,15];
+function avgMult(c,m){return 1+c*(m-1)}
+function resourcesPerMinute(wd,resource,p){
+  if(!wd||wd[0]<0||wd[2]<=0)return 0;
+  const res=resource||1,adj=res===1?(5-wd[1])/5-1:0;
+  const avgWave=Math.floor((wd[0]+adj)/resourceWaveReqs[res-1]);
+  if(avgWave<=0)return 0;
+  return(avgWave*avgWave+avgWave)*120/wd[2]*avgMult((p.x5money||0)/100,5)*avgMult(p.x2money||0,2);
+}
+
+// ── PERSISTENCE ──────────────────────────────────────────────
+const LS_KEY='shminer_state';
+function saveState(){try{localStorage.setItem(LS_KEY,JSON.stringify({upgrades,gemUp,prestigeCount,baseCost,currentResource}))}catch(_){}}
+function loadState(){
+  try{
+    const raw=localStorage.getItem(LS_KEY);if(!raw)return;
+    const s=JSON.parse(raw);
+    if(s.upgrades)upgrades=s.upgrades;if(s.gemUp)gemUp=s.gemUp;
+    if(s.prestigeCount!=null)prestigeCount=s.prestigeCount;
+    if(s.baseCost)baseCost=s.baseCost;if(s.currentResource)currentResource=s.currentResource;
+  }catch(_){}
+}
+
+// ── UI STATE ─────────────────────────────────────────────────
+let currentResource=1,baseCost=[0,0,0,0],storedApprox={},cachedP=null,cachedE=null,shiftHeld=false;
+document.addEventListener('keydown',e=>{if(e.key==='Shift')shiftHeld=true});
+document.addEventListener('keyup',  e=>{if(e.key==='Shift')shiftHeld=false});
+
+function setBaseCost(){baseCost=totalUpgradeCost(upgrades,costs);saveState();renderCosts()}
+function setPrestige(val){prestigeCount=Math.max(0,parseInt(val)||0);storedApprox={};runAndRender()}
+function changePrestige(delta){prestigeCount=Math.max(0,prestigeCount+delta);storedApprox={};runAndRender()}
+function cycleResource(){currentResource=(currentResource%4)+1;document.getElementById('res-num').textContent=currentResource;saveState();refreshUpgradeValues();renderHeader()}
+function setUpgrade(ti,uj,val){upgrades[ti][uj]=Math.max(0,Math.min(currentMaxLvl(ti,uj),parseInt(val)||0));storedApprox={};runAndRender()}
+function changeUpgrade(ti,uj,delta){const step=shiftHeld?10*delta:delta;upgrades[ti][uj]=Math.max(0,Math.min(currentMaxLvl(ti,uj),(upgrades[ti][uj]||0)+step));storedApprox={};runAndRender()}
+function setGem(gi,val){gemUp[gi]=Math.max(0,Math.min(currentMaxLvl_gem(gi),parseInt(val)||0));storedApprox={};runAndRender()}
+function changeGem(gi,delta){const step=shiftHeld?10*delta:delta;gemUp[gi]=Math.max(0,Math.min(currentMaxLvl_gem(gi),(gemUp[gi]||0)+step));storedApprox={};runAndRender()}
+
+// ── RENDER ───────────────────────────────────────────────────
+
+function renderHeader(){
+  if(!cachedP)return;
+  if(!storedApprox['base'])storedApprox['base']=GiveApproxWithUpgraded(0,7);
+  const ab=storedApprox['base'];
+  const rpm=resourcesPerMinute(ab,currentResource,cachedP);
+  document.getElementById('hs-wave').textContent=ab[0]>0?`${ab[0]}-${ab[1]}`:'—';
+  document.getElementById('hs-time').textContent=ab[2]>0?`${ab[2].toFixed(0)}s`:'—';
+  document.getElementById('hs-rpm').textContent=rpm>0?formatNumber(rpm):'—';
+}
+
+function renderStats(p,e){
+  const ps=[
+    ['Max HP',p.health],['Atk Dmg',p.atk],
+    ['Atk Spd',p.atkSpeed.toFixed(2)],['Move Spd',p.walkSpeed.toFixed(2)],
+    ['Crit',`${p.crit}% / ${p.critDmg.toFixed(2)}x`],
+    ['Event Spd',p.gameSpeed.toFixed(2)],['Block',`${Math.round(p.blockChance*100)}%`],
+    ['Prestige×',`${(1+prestigeCount*p.prestigeBonusScale).toFixed(2)}`],
+    ['2x Curr.',p.x2money],['5x Curr.',`${p.x5money}%`],
+  ];
+  document.getElementById('player-stats').innerHTML=ps.map(([k,v])=>`<div class="srow"><span class="sk">${k}</span><span class="sv">${v}</span></div>`).join('');
+  const es=[
+    ['1-shot up to',`w${get_highest_wave_killed_in_x_hits(p,e,1)}`],
+    ['Atk=1 until',`w${Math.max(0,Math.ceil((-e.atk+1)/e.atkScaling))}`],
+    ['Base Atk Spd',e.atkSpeed.toFixed(2)],
+    ['No crits until',`w${Math.floor(-(e.critDmg-1)/e.critDmgScaling)}`],
+  ];
+  document.getElementById('enemy-stats').innerHTML=es.map(([k,v])=>`<div class="srow"><span class="sk">${k}</span><span class="sv">${v}</span></div>`).join('');
+}
+
+function renderCosts(){
+  const curr=totalUpgradeCost(upgrades,costs);
+  const diff=curr.map((v,i)=>v-baseCost[i]);
+  const fmt=arr=>arr.map(formatNumber).join('  ');
+  document.getElementById('cost-display').innerHTML=
+    `<div class="cost-blk"><div class="cost-blk-lbl">Base</div><div class="cost-vals">${fmt(baseCost)}</div></div>`+
+    `<div class="cost-blk"><div class="cost-blk-lbl">Current</div><div class="cost-vals">${fmt(curr)}</div></div>`+
+    `<div class="cost-blk"><div class="cost-blk-lbl">Difference</div><div class="cost-vals">${fmt(diff)}</div></div>`;
+}
+
+function buildGemsDOM(){
+  const cont=document.getElementById('gem-upgrades');cont.innerHTML='';
+  for(let i=0;i<upgradeNames_gem.length;i++){
+    const row=document.createElement('div');row.className='upg-row';row.id=`gem-row-${i}`;
+    row.innerHTML=
+      `<div class="upg-ctrl">`+
+        `<button class="ubtn" id="gem-bm-${i}" tabindex="-1" onclick="changeGem(${i},-1)">-</button>`+
+        `<input class="upg-input" id="gem-inp-${i}" type="number" min="0" max="1" onchange="setGem(${i},this.value)" onfocus="this.select()">`+
+        `<span class="upg-maxl" id="gem-max-${i}"></span>`+
+        `<button class="ubtn" id="gem-bp-${i}" tabindex="-1" onclick="changeGem(${i},1)">+</button>`+
+      `</div>`+
+      `<div class="upg-data"><span class="upg-name">${upgradeNames_gem[i]}</span></div>`;
+    cont.appendChild(row);
+  }
+}
+function refreshGemValues(){
+  for(let i=0;i<upgradeNames_gem.length;i++){
+    const lvl=gemUp[i]||0,maxL=currentMaxLvl_gem(i);
+    document.getElementById(`gem-inp-${i}`).value=lvl;
+    document.getElementById(`gem-inp-${i}`).max=maxL;
+    document.getElementById(`gem-max-${i}`).textContent=`/${maxL}`;
+    document.getElementById(`gem-bm-${i}`).disabled=lvl<=0;
+    document.getElementById(`gem-bp-${i}`).disabled=lvl>=maxL;
+  }
+}
+
+function buildUpgradesDOM(){
+  const col=document.getElementById('upgrades-col');col.innerHTML='';
+  for(let ti=0;ti<4;ti++){
+    const sec=document.createElement('div');sec.className='tier-section';
+    const hdr=document.createElement('div');hdr.className='tier-hdr';hdr.textContent=`Tier ${ti+1}`;sec.appendChild(hdr);
+    for(let uj=0;uj<upgradeNames[ti].length;uj++){
+      const row=document.createElement('div');row.id=`upg-row-${ti}-${uj}`;row.className='upg-row';
+      row.innerHTML=
+        `<div class="gain-fill" id="upg-fill-${ti}-${uj}"></div>`+
+        `<div class="upg-ctrl">`+
+          `<button class="ubtn" id="upg-bm-${ti}-${uj}" tabindex="-1" onclick="changeUpgrade(${ti},${uj},-1)">-</button>`+
+          `<input class="upg-input" id="upg-inp-${ti}-${uj}" type="number" min="0" max="1" onchange="setUpgrade(${ti},${uj},this.value)" onfocus="this.select()">`+
+          `<span class="upg-maxl" id="upg-max-${ti}-${uj}"></span>`+
+          `<button class="ubtn" id="upg-bp-${ti}-${uj}" tabindex="-1" onclick="changeUpgrade(${ti},${uj},1)">+</button>`+
+        `</div>`+
+        `<div class="upg-data">`+
+          `<span class="upg-cost" id="upg-cost-${ti}-${uj}"></span>`+
+          `<span class="upg-name">${upgradeNames[ti][uj]}</span>`+
+          `<span class="upg-gain-val" id="upg-gain-${ti}-${uj}"></span>`+
+        `</div>`;
+      sec.appendChild(row);
+    }
+    col.appendChild(sec);
+  }
+}
+
+function refreshUpgradeValues(){
+  if(!storedApprox['base'])storedApprox['base']=GiveApproxWithUpgraded(0,7);
+  const baseRPM=resourcesPerMinute(storedApprox['base'],currentResource,cachedP||playerStatsBase);
+
+  // First pass: collect all gains
+  const allGains=[];
+  for(let ti=0;ti<4;ti++){
+    for(let uj=0;uj<upgradeNames[ti].length;uj++){
+      const presReq=prestigeUnlocked[ti][uj],locked=presReq>prestigeCount;
+      const maxL=currentMaxLvl(ti,uj),lvl=upgrades[ti][uj]||0;
+      let gain=0;
+      if(!locked&&cachedP&&lvl<maxL){
+        const key=`${ti}_${uj}`;
+        if(!storedApprox[key])storedApprox[key]=GiveApproxWithUpgraded(ti,uj);
+        const ad=storedApprox[key];
+        if(ad[0]>0)gain=resourcesPerMinute(ad,currentResource,cachedP)-baseRPM;
+      }
+      allGains.push({ti,uj,gain,locked,lvl,maxL,presReq});
+    }
+  }
+
+  // Compute max gain for bar scaling
+  const maxGain=Math.max(1,...allGains.map(g=>g.gain));
+
+  // Second pass: update DOM
+  for(const{ti,uj,gain,locked,lvl,maxL,presReq}of allGains){
+    document.getElementById(`upg-row-${ti}-${uj}`).className=`upg-row${locked?' locked':''}`;
+    const inp=document.getElementById(`upg-inp-${ti}-${uj}`);
+    inp.value=lvl;inp.max=maxL;inp.disabled=locked;
+    document.getElementById(`upg-max-${ti}-${uj}`).textContent=`/${maxL}`;
+    document.getElementById(`upg-bm-${ti}-${uj}`).disabled=lvl<=0||locked;
+    document.getElementById(`upg-bp-${ti}-${uj}`).disabled=lvl>=maxL||locked;
+    document.getElementById(`upg-cost-${ti}-${uj}`).textContent=locked?`P${presReq}`:formatNumber(costs[ti][uj]*Math.pow(1.25,lvl));
+    const gainStr=(!locked&&gain>0)?gain.toFixed(1):'';
+    document.getElementById(`upg-gain-${ti}-${uj}`).textContent=gainStr;
+    const pct=gain>0?Math.max(4,Math.round(gain/maxGain*100)):0;
+    document.getElementById(`upg-fill-${ti}-${uj}`).style.width=pct+'%';
+  }
+
+  // Top picks
+  const picks=allGains.filter(g=>!g.locked&&g.gain>0&&g.lvl<g.maxL).sort((a,b)=>b.gain-a.gain).slice(0,5);
+  const tp=document.getElementById('top-picks');
+  if(picks.length===0){tp.innerHTML='<div class="picks-empty">No gains to show yet.</div>';return}
+  tp.innerHTML=picks.map((g,i)=>{
+    const name=upgradeNames[g.ti][g.uj];
+    const cost=formatNumber(costs[g.ti][g.uj]*Math.pow(1.25,g.lvl));
+    return `<div class="pick${i===0?' best':''}">
+      <div class="pick-rank">${i+1}</div>
+      <div class="pick-body">
+        <div class="pick-name">${name}</div>
+        <div class="pick-meta">T${g.ti+1} · lv ${g.lvl} → ${g.lvl+1} · cost ${cost}</div>
+      </div>
+      <div class="pick-right">
+        <div class="pick-gain">+${g.gain.toFixed(1)}</div>
+        <div class="pick-cost">res${currentResource}/min</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderSimResults(eventRuns,avgDistance,avgTime,p){
+  const n=eventRuns.length;
+  const worst=eventRuns[0],best=eventRuns[n-1];
+  const avgWave=Math.floor(avgDistance);
+  const mats=calcMaterials(avgWave-1,p);
+
+  document.getElementById('sim-results-panel').innerHTML=
+    `<div class="ptitle">Simulation — 1000 runs</div>`+
+    `<div class="sim-grid">`+
+      `<div class="avg-wave">`+
+        `<div class="big-n">${avgWave}</div>`+
+        `<div class="big-lbl">Avg Wave</div>`+
+      `</div>`+
+      `<div class="mstat"><div class="mstat-val">${avgTime.toFixed(0)}s</div><div class="mstat-lbl">Avg Time</div></div>`+
+      `<div class="mstat"><div class="mstat-val">${formatNumber(mats[0])}</div><div class="mstat-lbl">Coins/Run</div></div>`+
+      `<div class="mstat"><div class="mstat-val">${formatNumber(mats[1])}</div><div class="mstat-lbl">Mat2/Run</div></div>`+
+    `</div>`+
+    `<div class="sim-sub">`+
+      `<span>worst <b>${worst[0]}-${worst[1]}</b> ${worst[2].toFixed(0)}s</span>`+
+      `<span>best <b>${best[0]}-${best[1]}</b> ${best[2].toFixed(0)}s</span>`+
+      `<span>mat3 <b>${formatNumber(mats[2])}</b> mat4 <b>${formatNumber(mats[3])}</b></span>`+
+    `</div>`;
+
+  // Wave chart
+  const waveMap={};
+  for(const r of eventRuns)waveMap[r[0]]=(waveMap[r[0]]||0)+1;
+  const waves=Object.entries(waveMap).sort((a,b)=>+a[0]-+b[0]);
+  const peakCount=Math.max(...waves.map(([,c])=>c));
+  document.getElementById('wave-chart').innerHTML=waves.map(([w,c])=>{
+    const pct=c*100/n,barW=Math.round(c/peakCount*100),isPeak=c===peakCount;
+    return `<div class="wrow">`+
+      `<div class="wlbl">w${w}</div>`+
+      `<div class="wtrack"><div class="wfill${isPeak?' peak':''}" style="width:${barW}%"></div></div>`+
+      `<div class="wpct">${pct.toFixed(1)}%</div>`+
+    `</div>`;
+  }).join('');
+}
+
+// ── BUDGET PLANNER ───────────────────────────────────────────
+function parseShortNum(s){
+  const str=String(s).trim().toLowerCase().replace(/,/g,'');
+  const m=str.match(/^([\d.]+)([kmbt]?)$/);
+  if(!m)return parseFloat(str)||0;
+  return parseFloat(m[1])*({'k':1e3,'m':1e6,'b':1e9,'t':1e12,'':1}[m[2]]||1);
+}
+function maxLvlFromLevels(ti,uj,lv){
+  if(capUpgIdx[ti]===uj)return maxLevels[ti][uj]+(lv[3][META_CAP]||0);
+  if(!(ti===3&&uj===META_CAP))return maxLevels[ti][uj]+(lv[ti][capUpgIdx[ti]]||0);
+  return maxLevels[ti][uj];
+}
+function budgetPlan(){
+  const res=[1,2,3,4].map(i=>parseShortNum(document.getElementById(`bud-inp-${i}`).value));
+  const levels=upgrades.map(tier=>[...tier]);
+  const ordered=[];
+  const summary={};
+  const MAX_ITER=600;
+  for(let iter=0;iter<MAX_ITER;iter++){
+    const{p:bp,e:be}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
+    const bApx=avgEvent_short(bp,be);
+    const bRPM=resourcesPerMinute(bApx,currentResource,bp);
+    let bestGain=0,bestTi=-1,bestUj=-1,bestCost=0;
+    for(let ti=0;ti<4;ti++){
+      if(res[ti]<=0)continue;
+      for(let uj=0;uj<upgradeNames[ti].length;uj++){
+        const lvl=levels[ti][uj]||0;
+        const maxL=maxLvlFromLevels(ti,uj,levels);
+        if(prestigeUnlocked[ti][uj]>prestigeCount)continue;
+        if(lvl>=maxL)continue;
+        const cost=costs[ti][uj]*Math.pow(1.25,lvl);
+        if(cost>res[ti])continue;
+        levels[ti][uj]++;
+        const{p,e}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
+        levels[ti][uj]--;
+        const rpm=resourcesPerMinute(avgEvent_short(p,e),currentResource,p);
+        const gain=rpm-bRPM;
+        if(gain>bestGain){bestGain=gain;bestTi=ti;bestUj=uj;bestCost=cost}
+      }
+    }
+    if(bestTi===-1)break;
+    levels[bestTi][bestUj]=(levels[bestTi][bestUj]||0)+1;
+    res[bestTi]-=bestCost;
+    const key=`${bestTi}_${bestUj}`;
+    if(!summary[key]){summary[key]={ti:bestTi,uj:bestUj,count:0,totalCost:0,startLvl:upgrades[bestTi][bestUj]||0};ordered.push(key)}
+    summary[key].count++;
+    summary[key].totalCost+=bestCost;
+  }
+  renderBudgetResults(ordered,summary,res);
+}
+function renderBudgetResults(ordered,summary,remaining){
+  const el=document.getElementById('budget-results');
+  if(ordered.length===0){el.innerHTML='<div class="bud-empty">Nenhuma compra possível com este orçamento.</div>';return}
+  const rows=ordered.map(k=>{
+    const{ti,uj,count,totalCost,startLvl}=summary[k];
+    return`<div class="bud-row">`+
+      `<div class="bud-name">T${ti+1} · ${upgradeNames[ti][uj]}</div>`+
+      `<div class="bud-detail">lv ${startLvl} → ${startLvl+count} (+${count}) · ${formatNumber(Math.round(totalCost))} res${ti+1}</div>`+
+      `</div>`;
+  }).join('');
+  const remHtml=remaining.map((r,i)=>`<span>res${i+1}: <b>${formatNumber(Math.floor(r))}</b></span>`).join('');
+  el.innerHTML=rows+`<div class="bud-remaining">${remHtml}</div>`;
+}
+
+function runAndRender(){
+  const{p,e}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
+  cachedP=p;cachedE=e;
+
+  const sp=document.getElementById('sim-results-panel');
+  sp.classList.add('simulating');
+
+  setTimeout(()=>{
+    const{eventRuns,avgDistance,avgTime}=FullEventSim(p,e,1000);
+    renderSimResults(eventRuns,avgDistance,avgTime,p);
+    sp.classList.remove('simulating');
+    renderHeader();
+  },0);
+
+  renderStats(p,e);
+  renderCosts();
+  refreshGemValues();
+  refreshUpgradeValues();
+  document.getElementById('pres-input').value=prestigeCount;
+  document.getElementById('res-num').textContent=currentResource;
+  saveState();
+}
+
+// Init
+loadState();
+buildUpgradesDOM();
+buildGemsDOM();
+runAndRender();
+</script>
+</body>
+</html>
