@@ -467,7 +467,7 @@ function changePrestige(delta){
 }
 function prestigeReset(){
   for(let ti=0;ti<4;ti++)for(let uj=0;uj<upgrades[ti].length;uj++)upgrades[ti][uj]=0;
-  approxCache={};runAndRender();
+  prestigeCount++;approxCache={};runAndRender();
 }
 function cycleResource(){currentResource=(currentResource%4)+1;document.getElementById('res-num').textContent=currentResource;saveState();refreshUpgradeValues()}
 function setUpgrade(ti,uj,val){upgrades[ti][uj]=Math.max(0,Math.min(currentMaxLvl(ti,uj),parseInt(val)||0));approxCache={};runAndRender()}
