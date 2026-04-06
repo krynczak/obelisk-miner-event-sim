@@ -431,10 +431,10 @@ function exportState(){
     const btn=document.getElementById('btn-export');
     const orig=btn.textContent;btn.textContent='Copied!';
     setTimeout(()=>{btn.textContent=orig},1500);
-  }).catch(()=>alert('Falha ao copiar. Tente em HTTPS ou localhost.'));
+  }).catch(()=>alert('Failed to copy. Try on HTTPS or localhost.'));
 }
 function importState(){
-  const text=prompt('Cole o save aqui:');
+  const text=prompt('Paste your save data here:');
   if(text)applyImport(text);
 }
 function applyImport(text){
@@ -446,7 +446,7 @@ function applyImport(text){
       throw new Error('invalid shape');
     applyStateFields(s);
     approxCache={};saveState();runAndRender();
-  }catch(_){alert('Save inválido ou corrompido.');}
+  }catch(_){alert('Invalid or corrupted save data.');}
 }
 
 // ── HOLD-TO-REPEAT ───────────────────────────────────────────
@@ -747,7 +747,7 @@ function budgetPlan(){
 }
 function renderBudgetResults(ordered,summary,remaining){
   const el=document.getElementById('budget-results');
-  if(ordered.length===0){el.innerHTML='<div class="bud-empty">Nenhuma compra possível com este orçamento.</div>';return}
+  if(ordered.length===0){el.innerHTML='<div class="bud-empty">No purchases possible with this budget.</div>';return}
   const rows=ordered.map(k=>{
     const{ti,uj,count,totalCost,startLvl}=summary[k];
     return`<div class="bud-row">`+
