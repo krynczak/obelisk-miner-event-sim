@@ -22,7 +22,7 @@
   --red:     #e05050;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;font-size:12px;-webkit-font-smoothing:antialiased}
+body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;font-size:12px;-webkit-font-smoothing:antialiased;zoom:1.33}
 
 /* ── Header ─────────────────────────────── */
 .header{display:flex;align-items:center;gap:20px;padding:9px 14px;background:var(--s1);border-bottom:1px solid var(--b1);position:sticky;top:0;z-index:10;flex-wrap:wrap}
@@ -35,7 +35,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 .res-btn:hover{border-color:var(--acc);color:var(--acc)}
 
 /* ── Layout ──────────────────────────────── */
-.layout{display:grid;grid-template-columns:196px 1fr 430px;gap:10px;padding:10px;align-items:start}
+.layout{display:grid;grid-template-columns:260px 1fr 500px;gap:10px;padding:10px;align-items:start}
 
 /* ── Panel ───────────────────────────────── */
 .panel{background:var(--s2);border:1px solid var(--b1);padding:10px;margin-bottom:8px}
@@ -88,6 +88,8 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 .upg-row{position:relative;display:flex;align-items:center;height:22px;margin-bottom:1px;background:var(--s1);border:1px solid transparent;overflow:hidden;transition:border-color .1s}
 .upg-row:hover{border-color:var(--b1)}
 .upg-row.locked{opacity:.4}
+.upg-row.maxed{border-left:2px solid var(--acc-dim);background:var(--s2)}
+.upg-row.maxed .upg-name{color:var(--acc-dim)}
 .gain-fill{position:absolute;left:0;top:0;bottom:0;background:var(--acc-glow);pointer-events:none;transition:width .35s ease}
 .upg-ctrl{display:flex;align-items:center;gap:1px;flex-shrink:0;position:relative;z-index:1;padding:0 3px}
 .ubtn{width:14px;height:14px;background:var(--s3);border:1px solid var(--b1);color:var(--t1);font-size:10px;line-height:12px;cursor:pointer;padding:0;text-align:center;flex-shrink:0;transition:background .1s;font-family:'Space Mono',monospace}
@@ -101,7 +103,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 .upg-maxl{font-size:9px;color:var(--t3);width:22px;position:relative;z-index:1}
 .upg-data{display:flex;align-items:center;flex:1;min-width:0;position:relative;z-index:1;gap:3px}
 .upg-cost{font-size:9px;color:var(--t2);width:32px;flex-shrink:0;text-align:right}
-.upg-name{flex:1;font-size:10px;color:var(--t1);white-space:nowrap;overflow:hidden;padding:0 2px}
+.upg-name{flex:1;font-size:10px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
 .upg-gain-val{font-size:10px;color:var(--gain);width:44px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;padding-right:4px}
 
 /* ── Prestige + gems ─────────────────────── */
@@ -109,13 +111,6 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 .pres-lbl{font-family:'Chakra Petch',sans-serif;font-size:10px;color:var(--t2);flex:1}
 .num-inp{width:36px;height:18px;font-size:11px}
 
-/* ── Costs ───────────────────────────────── */
-.cost-blk{margin-bottom:7px;padding-bottom:7px;border-bottom:1px solid var(--b1)}
-.cost-blk:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
-.cost-blk-lbl{font-family:'Chakra Petch',sans-serif;font-size:8px;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);margin-bottom:2px}
-.cost-vals{font-size:11px;color:var(--t1);font-variant-numeric:tabular-nums}
-.btn-sec{background:transparent;border:1px solid var(--b2);color:var(--t2);font-family:'Chakra Petch',sans-serif;font-size:9px;letter-spacing:.08em;padding:5px 0;cursor:pointer;transition:all .15s;margin-top:8px;width:100%;text-transform:uppercase}
-.btn-sec:hover{border-color:var(--acc-dim);color:var(--acc)}
 
 /* ── Scrollbar ───────────────────────────── */
 ::-webkit-scrollbar{width:4px;height:4px}
@@ -152,6 +147,8 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
     <div class="hstat"><span class="hstat-lbl">Resource <span id="res-num">1</span>/min</span><span class="hstat-val" id="hs-rpm">—</span></div>
   </div>
   <button class="res-btn" onclick="cycleResource()">Cycle Resource ▸</button>
+  <button class="res-btn" id="btn-export" onclick="exportState()">Export ▾</button>
+  <button class="res-btn" onclick="importState()">Import ▴</button>
 </header>
 
 <div class="layout">
@@ -167,17 +164,12 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
       <div id="enemy-stats"></div>
     </div>
     <div class="panel">
-      <div class="ptitle">Costs</div>
-      <div id="cost-display"></div>
-      <button class="btn-sec" onclick="setBaseCost()">Set current as base</button>
-    </div>
-    <div class="panel">
       <div class="ptitle">Prestige &amp; Gems</div>
       <div class="pres-row">
         <span class="pres-lbl">Prestiges</span>
-        <button class="ubtn" tabindex="-1" onclick="changePrestige(-1)">-</button>
+        <button class="ubtn" tabindex="-1" onpointerdown="startHold(()=>changePrestige(-1))" onpointerup="stopHold()" onpointercancel="stopHold()" onpointerleave="stopHold()">-</button>
         <input id="pres-input" class="num-inp" type="number" min="0" onchange="setPrestige(this.value)" onfocus="this.select()">
-        <button class="ubtn" tabindex="-1" onclick="changePrestige(1)">+</button>
+        <button class="ubtn" tabindex="-1" onpointerdown="startHold(()=>changePrestige(1))" onpointerup="stopHold()" onpointercancel="stopHold()" onpointerleave="stopHold()">+</button>
       </div>
       <div id="gem-upgrades"></div>
     </div>
@@ -194,10 +186,6 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
       <div id="top-picks"><div class="picks-empty">Calculating…</div></div>
     </div>
     <div class="panel">
-      <div class="ptitle">Wave Distribution</div>
-      <div id="wave-chart"></div>
-    </div>
-    <div class="panel">
       <div class="ptitle">Budget Planner</div>
       <div class="bud-inputs">
         <div class="bud-inp-grp"><label class="bud-inp-lbl">Res 1</label><input id="bud-inp-1" class="bud-inp" placeholder="4.21m" onfocus="this.select()"></div>
@@ -207,6 +195,10 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
       </div>
       <button class="btn-run" onclick="budgetPlan()">Calculate Buy Order</button>
       <div id="budget-results"></div>
+    </div>
+    <div class="panel">
+      <div class="ptitle">Wave Distribution</div>
+      <div id="wave-chart"></div>
     </div>
   </div>
 
@@ -368,12 +360,12 @@ function GiveApproxWithUpgraded(ti,uj){
 
 // ── UI DATA ──────────────────────────────────────────────────
 const upgradeNames=[
-  ['+1 Atk Dmg','+2 Max Hp','+0.02 Atk Spd','+0.03 Move Spd','+3% Event Spd','+1% Crit +0.10 CritDmg','+1 Atk +2 Hp','+1 T1 Cap','+1% Prestige Bonus','+3 Atk +3 Hp'],
-  ['+3 Max Hp','-0.02 Enemy Atk Spd','-1 Enemy Atk Dmg','-1% E.Crit -0.10 E.CritDmg','+1 Atk +0.01 AtkSpd','+1 T2 Cap','+2% Prestige Bonus'],
-  ['+2 Atk Dmg','+0.02 Atk Spd','+1% Crit','+5% Event Spd','+3 Atk +3 Hp','+1 T3 Cap','+3% 5x Drop','+5 Hp +0.03 AtkSpd'],
-  ['+1% Block','+5 Max Hp','+0.10 CritDmg -0.10 E.CritDmg','+0.02 Atk+Move Spd','+4 Atk +4 Hp','+1 T4 Cap','+1 Meta Cap','+10 Hp +0.05 AtkSpd'],
+  ['+1 Attack Damage','+2 Maximum Health','+0.02 Attack Speed','+0.03 Move Speed','+3% Event Game Speed','+1% Crit Chance +0.10 Crit Damage','+1 Attack Damage +2 Maximum Health','+1 Tier 1 Upgrade Caps','+1% Prestige Bonus','+3 Attack Damage +3 Maximum Health'],
+  ['+3 Maximum Health','-0.02 Enemy Attack Speed','-1 Enemy Attack Damage','-1% Enemy Crit Chance -0.10 Enemy Crit Damage','+1 Attack Damage +0.01 Attack Speed','+1 Tier 2 Upgrade Caps','+2% Prestige Bonus'],
+  ['+2 Attack Damage','+0.02 Attack Speed','+1% Crit Chance','+5% Event Game Speed','+3 Attack Damage +3 Maximum Health','+1 Tier 3 Upgrade Caps','+3% 5x Drop Chance','+5 Maximum Health +0.03 Attack Speed'],
+  ['+1% Block Chance','+5 Maximum Health','+0.10 Crit Damage -0.10 Enemy Crit Damage','+0.02 Attack Speed +0.02 Move Speed','+4 Maximum Health +4 Attack Damage','+1 Tier 4 Upgrade Caps','+1 Cap of Cap Upgrades','+10 Maximum Health +0.05 Attack Speed'],
 ];
-const upgradeNames_gem=['+10% Dmg','+10% Max Hp','+125% Event Spd','2x Currencies'];
+const upgradeNames_gem=['+10% Damage','+10% Maximum Health','+125% Event Game Speed','2x Event Currencies'];
 const prestigeUnlocked=[[0,0,0,0,1,2,2,4,8,10],[0,0,0,3,4,5,10],[1,1,2,3,4,6,8,10],[1,3,4,5,6,6,7,10]];
 const maxLevels=[[50,50,25,25,25,25,25,10,5,40],[25,15,10,15,25,10,15],[20,20,20,20,10,10,10,40],[15,15,15,15,15,10,10,40]];
 const capUpgIdx=[7,5,5,5];
@@ -402,14 +394,54 @@ function resourcesPerMinute(wd,resource,p){
 // ── PERSISTENCE ──────────────────────────────────────────────
 const LS_KEY='shminer_state';
 function saveState(){try{localStorage.setItem(LS_KEY,JSON.stringify({upgrades,gemUp,prestigeCount,baseCost,currentResource}))}catch(_){}}
+function applyStateFields(s){
+  if(s.upgrades)upgrades=s.upgrades;
+  if(s.gemUp)gemUp=s.gemUp;
+  if(s.prestigeCount!=null)prestigeCount=s.prestigeCount;
+  if(s.baseCost)baseCost=s.baseCost;
+  if(s.currentResource)currentResource=s.currentResource;
+}
 function loadState(){
   try{
     const raw=localStorage.getItem(LS_KEY);if(!raw)return;
-    const s=JSON.parse(raw);
-    if(s.upgrades)upgrades=s.upgrades;if(s.gemUp)gemUp=s.gemUp;
-    if(s.prestigeCount!=null)prestigeCount=s.prestigeCount;
-    if(s.baseCost)baseCost=s.baseCost;if(s.currentResource)currentResource=s.currentResource;
+    applyStateFields(JSON.parse(raw));
   }catch(_){}
+}
+
+// ── EXPORT / IMPORT ──────────────────────────────────────────
+function exportState(){
+  const data=JSON.stringify({upgrades,gemUp,prestigeCount,baseCost,currentResource});
+  navigator.clipboard.writeText(data).then(()=>{
+    const btn=document.getElementById('btn-export');
+    const orig=btn.textContent;btn.textContent='Copied!';
+    setTimeout(()=>{btn.textContent=orig},1500);
+  }).catch(()=>alert('Falha ao copiar. Tente em HTTPS ou localhost.'));
+}
+function importState(){
+  const text=prompt('Cole o save aqui:');
+  if(text)applyImport(text);
+}
+function applyImport(text){
+  try{
+    const s=JSON.parse(text);
+    if(!Array.isArray(s.upgrades)||s.upgrades.length!==4||!Array.isArray(s.gemUp)||s.gemUp.length!==4
+      ||typeof s.prestigeCount!=='number'||!Array.isArray(s.baseCost)||s.baseCost.length!==4
+      ||typeof s.currentResource!=='number'||s.currentResource<1||s.currentResource>4)
+      throw new Error('invalid shape');
+    applyStateFields(s);
+    storedApprox={};saveState();runAndRender();
+  }catch(_){alert('Save inválido ou corrompido.');}
+}
+
+// ── HOLD-TO-REPEAT ───────────────────────────────────────────
+let _holdTimer=null,_holdInterval=null;
+function startHold(fn){
+  fn();
+  _holdTimer=setTimeout(()=>{_holdInterval=setInterval(fn,80)},400);
+}
+function stopHold(){
+  clearTimeout(_holdTimer);clearInterval(_holdInterval);
+  _holdTimer=null;_holdInterval=null;
 }
 
 // ── UI STATE ─────────────────────────────────────────────────
@@ -417,14 +449,29 @@ let currentResource=1,baseCost=[0,0,0,0],storedApprox={},cachedP=null,cachedE=nu
 document.addEventListener('keydown',e=>{if(e.key==='Shift')shiftHeld=true});
 document.addEventListener('keyup',  e=>{if(e.key==='Shift')shiftHeld=false});
 
-function setBaseCost(){baseCost=totalUpgradeCost(upgrades,costs);saveState();renderCosts()}
 function setPrestige(val){prestigeCount=Math.max(0,parseInt(val)||0);storedApprox={};runAndRender()}
-function changePrestige(delta){prestigeCount=Math.max(0,prestigeCount+delta);storedApprox={};runAndRender()}
+function changePrestige(delta){
+  const next=Math.max(0,prestigeCount+delta);
+  if(next===prestigeCount)return;
+  prestigeCount=next;storedApprox={};runAndRender();
+}
 function cycleResource(){currentResource=(currentResource%4)+1;document.getElementById('res-num').textContent=currentResource;saveState();refreshUpgradeValues();renderHeader()}
 function setUpgrade(ti,uj,val){upgrades[ti][uj]=Math.max(0,Math.min(currentMaxLvl(ti,uj),parseInt(val)||0));storedApprox={};runAndRender()}
-function changeUpgrade(ti,uj,delta){const step=shiftHeld?10*delta:delta;upgrades[ti][uj]=Math.max(0,Math.min(currentMaxLvl(ti,uj),(upgrades[ti][uj]||0)+step));storedApprox={};runAndRender()}
+function changeUpgrade(ti,uj,delta){
+  const step=shiftHeld?10*delta:delta;
+  const prev=upgrades[ti][uj]||0;
+  const next=Math.max(0,Math.min(currentMaxLvl(ti,uj),prev+step));
+  if(next===prev)return;
+  upgrades[ti][uj]=next;storedApprox={};runAndRender();
+}
 function setGem(gi,val){gemUp[gi]=Math.max(0,Math.min(currentMaxLvl_gem(gi),parseInt(val)||0));storedApprox={};runAndRender()}
-function changeGem(gi,delta){const step=shiftHeld?10*delta:delta;gemUp[gi]=Math.max(0,Math.min(currentMaxLvl_gem(gi),(gemUp[gi]||0)+step));storedApprox={};runAndRender()}
+function changeGem(gi,delta){
+  const step=shiftHeld?10*delta:delta;
+  const prev=gemUp[gi]||0;
+  const next=Math.max(0,Math.min(currentMaxLvl_gem(gi),prev+step));
+  if(next===prev)return;
+  gemUp[gi]=next;storedApprox={};runAndRender();
+}
 
 // ── RENDER ───────────────────────────────────────────────────
 
@@ -440,32 +487,31 @@ function renderHeader(){
 
 function renderStats(p,e){
   const ps=[
-    ['Max HP',p.health],['Atk Dmg',p.atk],
-    ['Atk Spd',p.atkSpeed.toFixed(2)],['Move Spd',p.walkSpeed.toFixed(2)],
-    ['Crit',`${p.crit}% / ${p.critDmg.toFixed(2)}x`],
-    ['Event Spd',p.gameSpeed.toFixed(2)],['Block',`${Math.round(p.blockChance*100)}%`],
-    ['Prestige×',`${(1+prestigeCount*p.prestigeBonusScale).toFixed(2)}`],
-    ['2x Curr.',p.x2money],['5x Curr.',`${p.x5money}%`],
+    ['Max Hp',p.health],
+    ['Attack Damage',p.atk],
+    ['Attack Speed',p.atkSpeed.toFixed(2)],
+    ['Move Speed',p.walkSpeed.toFixed(2)],
+    ['Crit Chance',p.crit],
+    ['Crit Damage',p.critDmg.toFixed(2)],
+    ['2x Currencies',p.x2money*100],
+    ['Event Speed',p.gameSpeed.toFixed(2)],
+    ['Block Chance',Math.round(p.blockChance*100)],
+    ['Prestige Hp/Dmg',(1+prestigeCount*p.prestigeBonusScale).toFixed(2)],
+    ['5x Currencies',p.x5money],
   ];
   document.getElementById('player-stats').innerHTML=ps.map(([k,v])=>`<div class="srow"><span class="sk">${k}</span><span class="sv">${v}</span></div>`).join('');
+  const oneShot=get_highest_wave_killed_in_x_hits(p,e,1);
+  const minDmgWave=Math.max(0,Math.ceil((-e.atk+1)/e.atkScaling));
+  const noCritWave=Math.floor(-(e.critDmg-1)/e.critDmgScaling);
   const es=[
-    ['1-shot up to',`w${get_highest_wave_killed_in_x_hits(p,e,1)}`],
-    ['Atk=1 until',`w${Math.max(0,Math.ceil((-e.atk+1)/e.atkScaling))}`],
-    ['Base Atk Spd',e.atkSpeed.toFixed(2)],
-    ['No crits until',`w${Math.floor(-(e.critDmg-1)/e.critDmgScaling)}`],
+    ['1-shot kill until','Wave '+oneShot],
+    ['Enemy deals 1 dmg until','Wave '+minDmgWave],
+    ['Enemy crits after','Wave '+noCritWave],
   ];
   document.getElementById('enemy-stats').innerHTML=es.map(([k,v])=>`<div class="srow"><span class="sk">${k}</span><span class="sv">${v}</span></div>`).join('');
 }
 
-function renderCosts(){
-  const curr=totalUpgradeCost(upgrades,costs);
-  const diff=curr.map((v,i)=>v-baseCost[i]);
-  const fmt=arr=>arr.map(formatNumber).join('  ');
-  document.getElementById('cost-display').innerHTML=
-    `<div class="cost-blk"><div class="cost-blk-lbl">Base</div><div class="cost-vals">${fmt(baseCost)}</div></div>`+
-    `<div class="cost-blk"><div class="cost-blk-lbl">Current</div><div class="cost-vals">${fmt(curr)}</div></div>`+
-    `<div class="cost-blk"><div class="cost-blk-lbl">Difference</div><div class="cost-vals">${fmt(diff)}</div></div>`;
-}
+
 
 function buildGemsDOM(){
   const cont=document.getElementById('gem-upgrades');cont.innerHTML='';
@@ -473,10 +519,10 @@ function buildGemsDOM(){
     const row=document.createElement('div');row.className='upg-row';row.id=`gem-row-${i}`;
     row.innerHTML=
       `<div class="upg-ctrl">`+
-        `<button class="ubtn" id="gem-bm-${i}" tabindex="-1" onclick="changeGem(${i},-1)">-</button>`+
+        `<button class="ubtn" id="gem-bm-${i}" tabindex="-1" onpointerdown="startHold(()=>changeGem(${i},-1))" onpointerup="stopHold()" onpointercancel="stopHold()" onpointerleave="stopHold()">-</button>`+
         `<input class="upg-input" id="gem-inp-${i}" type="number" min="0" max="1" onchange="setGem(${i},this.value)" onfocus="this.select()">`+
         `<span class="upg-maxl" id="gem-max-${i}"></span>`+
-        `<button class="ubtn" id="gem-bp-${i}" tabindex="-1" onclick="changeGem(${i},1)">+</button>`+
+        `<button class="ubtn" id="gem-bp-${i}" tabindex="-1" onpointerdown="startHold(()=>changeGem(${i},1))" onpointerup="stopHold()" onpointercancel="stopHold()" onpointerleave="stopHold()">+</button>`+
       `</div>`+
       `<div class="upg-data"><span class="upg-name">${upgradeNames_gem[i]}</span></div>`;
     cont.appendChild(row);
@@ -485,6 +531,7 @@ function buildGemsDOM(){
 function refreshGemValues(){
   for(let i=0;i<upgradeNames_gem.length;i++){
     const lvl=gemUp[i]||0,maxL=currentMaxLvl_gem(i);
+    document.getElementById(`gem-row-${i}`).className=`upg-row${lvl>=maxL?' maxed':''}`;
     document.getElementById(`gem-inp-${i}`).value=lvl;
     document.getElementById(`gem-inp-${i}`).max=maxL;
     document.getElementById(`gem-max-${i}`).textContent=`/${maxL}`;
@@ -503,10 +550,10 @@ function buildUpgradesDOM(){
       row.innerHTML=
         `<div class="gain-fill" id="upg-fill-${ti}-${uj}"></div>`+
         `<div class="upg-ctrl">`+
-          `<button class="ubtn" id="upg-bm-${ti}-${uj}" tabindex="-1" onclick="changeUpgrade(${ti},${uj},-1)">-</button>`+
+          `<button class="ubtn" id="upg-bm-${ti}-${uj}" tabindex="-1" onpointerdown="startHold(()=>changeUpgrade(${ti},${uj},-1))" onpointerup="stopHold()" onpointercancel="stopHold()" onpointerleave="stopHold()">-</button>`+
           `<input class="upg-input" id="upg-inp-${ti}-${uj}" type="number" min="0" max="1" onchange="setUpgrade(${ti},${uj},this.value)" onfocus="this.select()">`+
           `<span class="upg-maxl" id="upg-max-${ti}-${uj}"></span>`+
-          `<button class="ubtn" id="upg-bp-${ti}-${uj}" tabindex="-1" onclick="changeUpgrade(${ti},${uj},1)">+</button>`+
+          `<button class="ubtn" id="upg-bp-${ti}-${uj}" tabindex="-1" onpointerdown="startHold(()=>changeUpgrade(${ti},${uj},1))" onpointerup="stopHold()" onpointercancel="stopHold()" onpointerleave="stopHold()">+</button>`+
         `</div>`+
         `<div class="upg-data">`+
           `<span class="upg-cost" id="upg-cost-${ti}-${uj}"></span>`+
@@ -545,7 +592,8 @@ function refreshUpgradeValues(){
 
   // Second pass: update DOM
   for(const{ti,uj,gain,locked,lvl,maxL,presReq}of allGains){
-    document.getElementById(`upg-row-${ti}-${uj}`).className=`upg-row${locked?' locked':''}`;
+    const maxed=!locked&&lvl>=maxL;
+    document.getElementById(`upg-row-${ti}-${uj}`).className=`upg-row${locked?' locked':maxed?' maxed':''}`;
     const inp=document.getElementById(`upg-inp-${ti}-${uj}`);
     inp.value=lvl;inp.max=maxL;inp.disabled=locked;
     document.getElementById(`upg-max-${ti}-${uj}`).textContent=`/${maxL}`;
@@ -696,7 +744,6 @@ function runAndRender(){
   },0);
 
   renderStats(p,e);
-  renderCosts();
   refreshGemValues();
   refreshUpgradeValues();
   document.getElementById('pres-input').value=prestigeCount;
