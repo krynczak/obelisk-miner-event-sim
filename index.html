@@ -28,10 +28,6 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 .header{display:flex;align-items:center;gap:20px;padding:9px 14px;background:var(--s1);border-bottom:1px solid var(--b1);position:sticky;top:0;z-index:10;flex-wrap:wrap}
 .brand{font-family:'Chakra Petch',sans-serif;font-size:13px;font-weight:700;color:var(--acc);letter-spacing:.06em;white-space:nowrap}
 .version{font-size:9px;font-weight:400;color:var(--t3);letter-spacing:.08em}
-.header-stats{display:flex;gap:28px;flex:1}
-.hstat{display:flex;flex-direction:column;gap:1px}
-.hstat-lbl{font-family:'Chakra Petch',sans-serif;font-size:8px;letter-spacing:.15em;text-transform:uppercase;color:var(--t3)}
-.hstat-val{font-family:'Chakra Petch',sans-serif;font-size:16px;font-weight:600;color:var(--t1);font-variant-numeric:tabular-nums}
 .res-btn{background:transparent;border:1px solid var(--b2);color:var(--t2);font-family:'Chakra Petch',sans-serif;font-size:9px;letter-spacing:.1em;padding:5px 12px;cursor:pointer;transition:all .15s;text-transform:uppercase;white-space:nowrap}
 .res-btn:hover{border-color:var(--acc);color:var(--acc)}
 
@@ -145,13 +141,8 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 
 <header class="header">
   <div class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v1.1.0</span></div>
-  <div class="header-stats">
-    <div class="hstat"><span class="hstat-lbl">Avg Wave</span><span class="hstat-val" id="hs-wave">—</span></div>
-    <div class="hstat"><span class="hstat-lbl">Avg Time</span><span class="hstat-val" id="hs-time">—</span></div>
-    <div class="hstat"><span class="hstat-lbl">Resource <span id="res-num">1</span>/min</span><span class="hstat-val" id="hs-rpm">—</span></div>
-  </div>
   <button class="res-btn" onclick="approxCache={};runAndRender()">Run Sim ▶</button>
-  <button class="res-btn" onclick="cycleResource()">Cycle Resource ▸</button>
+  <button class="res-btn" onclick="cycleResource()">Cycle Resource <span id="res-num">1</span> ▸</button>
   <button class="res-btn" id="btn-export" onclick="exportState()">Export ▾</button>
   <button class="res-btn" onclick="importState()">Import ▴</button>
 </header>
@@ -178,6 +169,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
       </div>
       <div id="gem-upgrades"></div>
       <div id="pres-milestone" class="pres-milestone"></div>
+      <button class="res-btn" style="width:100%;margin-top:6px" onclick="prestigeReset()">Prestige Reset</button>
     </div>
   </div>
 
@@ -463,7 +455,7 @@ function stopHold(){
 }
 
 // ── UI STATE ─────────────────────────────────────────────────
-let currentResource=1,baseCost=[0,0,0,0],approxCache={},cachedP=null,cachedE=null,shiftHeld=false,lastAvgDistance=null,lastAvgTime=null;
+let currentResource=1,baseCost=[0,0,0,0],approxCache={},cachedP=null,cachedE=null,shiftHeld=false;
 document.addEventListener('keydown',e=>{if(e.key==='Shift')shiftHeld=true});
 document.addEventListener('keyup',  e=>{if(e.key==='Shift')shiftHeld=false});
 
@@ -473,7 +465,11 @@ function changePrestige(delta){
   if(next===prestigeCount)return;
   prestigeCount=next;approxCache={};runAndRender();
 }
-function cycleResource(){currentResource=(currentResource%4)+1;document.getElementById('res-num').textContent=currentResource;saveState();refreshUpgradeValues();renderHeader()}
+function prestigeReset(){
+  for(let ti=0;ti<4;ti++)for(let uj=0;uj<upgrades[ti].length;uj++)upgrades[ti][uj]=0;
+  approxCache={};runAndRender();
+}
+function cycleResource(){currentResource=(currentResource%4)+1;document.getElementById('res-num').textContent=currentResource;saveState();refreshUpgradeValues()}
 function setUpgrade(ti,uj,val){upgrades[ti][uj]=Math.max(0,Math.min(currentMaxLvl(ti,uj),parseInt(val)||0));approxCache={};runAndRender()}
 function changeUpgrade(ti,uj,delta){
   const step=shiftHeld?10*delta:delta;
@@ -493,22 +489,6 @@ function changeGem(gi,delta){
 
 // ── RENDER ───────────────────────────────────────────────────
 
-function renderHeader(avgDistance,avgTime){
-  if(!cachedP)return;
-  if(avgDistance!=null)lastAvgDistance=avgDistance;
-  if(avgTime!=null)lastAvgTime=avgTime;
-  if(lastAvgDistance!=null&&lastAvgTime!=null){
-    const avgWave=Math.floor(lastAvgDistance);
-    const avgSub=Math.round((1-(lastAvgDistance-avgWave))*5)||1;
-    const rpm=resourcesPerMinute([avgWave,avgSub,lastAvgTime],currentResource,cachedP);
-    document.getElementById('hs-wave').textContent=`${avgWave}-${avgSub}`;
-    document.getElementById('hs-time').textContent=`${lastAvgTime.toFixed(0)}s`;
-    document.getElementById('hs-rpm').textContent=rpm>0?formatNumber(rpm):'—';
-  }else{
-    document.getElementById('hs-wave').textContent='—';
-    document.getElementById('hs-time').textContent='—';
-    document.getElementById('hs-rpm').textContent='—';
-}
 
 function renderStats(p,e){
   const ps=[
@@ -784,7 +764,6 @@ function runAndRender(){
     const{eventRuns,avgDistance,avgTime}=FullEventSim(p,e,1000);
     renderSimResults(eventRuns,avgDistance,avgTime,p);
     sp.classList.remove('simulating');
-    renderHeader(avgDistance,avgTime);
   },0);
 
   renderStats(p,e);
