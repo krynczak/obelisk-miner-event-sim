@@ -62,7 +62,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 
 /* ── Top picks ───────────────────────────── */
 .pick{display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--s3);border:1px solid var(--b1);margin-bottom:5px;position:relative;overflow:hidden;transition:border-color .15s}
-.pick:hover{border-color:var(--b2)}
+.pick:hover{border-color:var(--b2);cursor:pointer}
 .pick.best{border-left:3px solid var(--acc)}
 .pick-rank{font-family:'Chakra Petch',sans-serif;font-size:16px;font-weight:700;color:var(--t3);width:20px;flex-shrink:0;line-height:1}
 .pick.best .pick-rank{color:var(--acc)}
@@ -643,7 +643,7 @@ function refreshUpgradeValues(){
   tp.innerHTML=picks.map((g,i)=>{
     const name=upgradeNames[g.ti][g.uj];
     const cost=formatNumber(costs[g.ti][g.uj]*Math.pow(1.25,g.lvl));
-    return `<div class="pick${i===0?' best':''}">
+    return `<div class="pick${i===0?' best':''}" onclick="changeUpgrade(${g.ti},${g.uj},1)">
       <div class="pick-rank">${i+1}</div>
       <div class="pick-body">
         <div class="pick-name">${name}</div>
