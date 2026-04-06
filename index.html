@@ -637,21 +637,26 @@ function refreshUpgradeValues(){
     document.getElementById(`upg-fill-${ti}-${uj}`).style.width=pct+'%';
   }
 
-  // Top picks
-  const picks=allGains.filter(g=>!g.locked&&g.gain>0&&g.lvl<g.maxL).sort((a,b)=>b.gain-a.gain).slice(0,5);
+  // Top picks: show upgrades with gain > 0, then fill remaining slots with gain=0 (marginal) upgrades
+  const available=allGains.filter(g=>!g.locked&&g.lvl<g.maxL);
+  const withGain=available.filter(g=>g.gain>0).sort((a,b)=>b.gain-a.gain);
+  const marginal=available.filter(g=>g.gain===0);
+  const picks=[...withGain,...marginal].slice(0,5);
   const tp=document.getElementById('top-picks');
   if(picks.length===0){tp.innerHTML='<div class="picks-empty">No gains to show yet.</div>';return}
   tp.innerHTML=picks.map((g,i)=>{
     const name=upgradeNames[g.ti][g.uj];
     const cost=formatNumber(costs[g.ti][g.uj]*Math.pow(1.25,g.lvl));
-    return `<div class="pick${i===0?' best':''}" onclick="changeUpgrade(${g.ti},${g.uj},1)">
+    const isBest=i===0&&g.gain>0;
+    const gainText=g.gain>0?`+${g.gain.toFixed(1)}`:'< 0.1';
+    return `<div class="pick${isBest?' best':''}" onclick="changeUpgrade(${g.ti},${g.uj},1)">
       <div class="pick-rank">${i+1}</div>
       <div class="pick-body">
         <div class="pick-name">${name}</div>
         <div class="pick-meta">T${g.ti+1} · lv ${g.lvl} → ${g.lvl+1} · cost ${cost}</div>
       </div>
       <div class="pick-right">
-        <div class="pick-gain">+${g.gain.toFixed(1)}</div>
+        <div class="pick-gain">${gainText}</div>
         <div class="pick-cost">res${currentResource}/min</div>
       </div>
     </div>`;
