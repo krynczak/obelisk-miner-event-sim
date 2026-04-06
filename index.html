@@ -169,7 +169,8 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
       </div>
       <div id="gem-upgrades"></div>
       <div id="pres-milestone" class="pres-milestone"></div>
-      <button class="res-btn" style="width:100%;margin-top:6px" onclick="prestigeReset()">Prestige Reset</button>
+      <button class="res-btn" style="width:100%;margin-top:6px" onclick="prestigeReset()">Reset Upgrades</button>
+      <div style="font-size:8px;color:var(--t3);margin-top:3px;text-align:center">Update prestige count above after resetting</div>
     </div>
   </div>
 
@@ -467,7 +468,7 @@ function changePrestige(delta){
 }
 function prestigeReset(){
   for(let ti=0;ti<4;ti++)for(let uj=0;uj<upgrades[ti].length;uj++)upgrades[ti][uj]=0;
-  prestigeCount++;approxCache={};runAndRender();
+  approxCache={};runAndRender();
 }
 function cycleResource(){currentResource=(currentResource%4)+1;document.getElementById('res-num').textContent=currentResource;saveState();refreshUpgradeValues()}
 function setUpgrade(ti,uj,val){upgrades[ti][uj]=Math.max(0,Math.min(currentMaxLvl(ti,uj),parseInt(val)||0));approxCache={};runAndRender()}
