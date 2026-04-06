@@ -150,6 +150,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
     <div class="hstat"><span class="hstat-lbl">Avg Time</span><span class="hstat-val" id="hs-time">—</span></div>
     <div class="hstat"><span class="hstat-lbl">Resource <span id="res-num">1</span>/min</span><span class="hstat-val" id="hs-rpm">—</span></div>
   </div>
+  <button class="res-btn" onclick="approxCache={};runAndRender()">Run Sim ▶</button>
   <button class="res-btn" onclick="cycleResource()">Cycle Resource ▸</button>
   <button class="res-btn" id="btn-export" onclick="exportState()">Export ▾</button>
   <button class="res-btn" onclick="importState()">Import ▴</button>
