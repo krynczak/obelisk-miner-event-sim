@@ -631,7 +631,7 @@ function refreshUpgradeValues(){
     document.getElementById(`upg-max-${ti}-${uj}`).textContent=`/${maxL}`;
     document.getElementById(`upg-bm-${ti}-${uj}`).disabled=lvl<=0||locked;
     document.getElementById(`upg-bp-${ti}-${uj}`).disabled=lvl>=maxL||locked;
-    document.getElementById(`upg-name-${ti}-${uj}`).textContent=locked?(needsPrev?'Level up previous to unlock':`Unlocks at Prestige ${presReq}`):upgradeNames[ti][uj];
+    document.getElementById(`upg-name-${ti}-${uj}`).textContent=locked?'Level Up Previous To Unlock':upgradeNames[ti][uj];
     document.getElementById(`upg-cost-${ti}-${uj}`).textContent=locked?'':formatNumber(costs[ti][uj]*Math.pow(1.25,lvl));
     const gainStr=locked||lvl>=maxL?'':gain>0?gain.toFixed(1):'< 0.1';
     document.getElementById(`upg-gain-${ti}-${uj}`).textContent=gainStr;
