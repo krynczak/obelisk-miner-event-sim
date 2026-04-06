@@ -603,8 +603,7 @@ function refreshUpgradeValues(){
   for(let ti=0;ti<4;ti++){
     for(let uj=0;uj<upgradeNames[ti].length;uj++){
       const presReq=prestigeUnlocked[ti][uj];
-      const lastIdx=upgradeNames[ti].length-1;
-      const needsPrev=uj===lastIdx&&lastIdx>0&&(upgrades[ti][lastIdx-1]||0)<1;
+      const needsPrev=uj>0&&(upgrades[ti][uj-1]||0)<1;
       const locked=presReq>prestigeCount||needsPrev;
       const maxL=currentMaxLvl(ti,uj),lvl=upgrades[ti][uj]||0;
       let gain=0;
