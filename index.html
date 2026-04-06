@@ -463,7 +463,7 @@ function stopHold(){
 }
 
 // ── UI STATE ─────────────────────────────────────────────────
-let currentResource=1,baseCost=[0,0,0,0],approxCache={},cachedP=null,cachedE=null,shiftHeld=false;
+let currentResource=1,baseCost=[0,0,0,0],approxCache={},cachedP=null,cachedE=null,shiftHeld=false,lastAvgDistance=null,lastAvgTime=null;
 document.addEventListener('keydown',e=>{if(e.key==='Shift')shiftHeld=true});
 document.addEventListener('keyup',  e=>{if(e.key==='Shift')shiftHeld=false});
 
@@ -493,14 +493,21 @@ function changeGem(gi,delta){
 
 // ── RENDER ───────────────────────────────────────────────────
 
-function renderHeader(){
+function renderHeader(avgDistance,avgTime){
   if(!cachedP)return;
-  if(!approxCache['base'])approxCache['base']=GiveApproxWithUpgraded(0,7);
-  const ab=approxCache['base'];
-  const rpm=resourcesPerMinute(ab,currentResource,cachedP);
-  document.getElementById('hs-wave').textContent=ab[0]>0?`${ab[0]}-${ab[1]}`:'—';
-  document.getElementById('hs-time').textContent=ab[2]>0?`${ab[2].toFixed(0)}s`:'—';
-  document.getElementById('hs-rpm').textContent=rpm>0?formatNumber(rpm):'—';
+  if(avgDistance!=null)lastAvgDistance=avgDistance;
+  if(avgTime!=null)lastAvgTime=avgTime;
+  if(lastAvgDistance!=null&&lastAvgTime!=null){
+    const avgWave=Math.floor(lastAvgDistance);
+    const avgSub=Math.round((1-(lastAvgDistance-avgWave))*5)||1;
+    const rpm=resourcesPerMinute([avgWave,avgSub,lastAvgTime],currentResource,cachedP);
+    document.getElementById('hs-wave').textContent=`${avgWave}-${avgSub}`;
+    document.getElementById('hs-time').textContent=`${lastAvgTime.toFixed(0)}s`;
+    document.getElementById('hs-rpm').textContent=rpm>0?formatNumber(rpm):'—';
+  }else{
+    document.getElementById('hs-wave').textContent='—';
+    document.getElementById('hs-time').textContent='—';
+    document.getElementById('hs-rpm').textContent='—';
 }
 
 function renderStats(p,e){
@@ -777,7 +784,7 @@ function runAndRender(){
     const{eventRuns,avgDistance,avgTime}=FullEventSim(p,e,1000);
     renderSimResults(eventRuns,avgDistance,avgTime,p);
     sp.classList.remove('simulating');
-    renderHeader();
+    renderHeader(avgDistance,avgTime);
   },0);
 
   renderStats(p,e);
