@@ -642,7 +642,7 @@ function refreshUpgradeValues(){
     const tierUpgrades=available.filter(g=>g.ti===ti).sort((a,b)=>b.gain-a.gain);
     if(tierUpgrades.length>0)picks.push(tierUpgrades[0]);
   }
-  picks.sort((a,b)=>b.gain-a.gain);
+  picks.sort((a,b)=>a.ti-b.ti);
   const tp=document.getElementById('top-picks');
   if(picks.length===0){tp.innerHTML='<div class="picks-empty">No gains to show yet.</div>';return}
   tp.innerHTML=picks.map((g,i)=>{
