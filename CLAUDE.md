@@ -1,4 +1,4 @@
-# Shminer Event Sim
+# Czak Event Sim
 
 ## Architecture
 Single-file HTML/JS/CSS app at `index.html`. No build system, no external JS dependencies (only Google Fonts CDN). Designed for GitHub Pages deployment.

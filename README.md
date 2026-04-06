@@ -1,8 +1,8 @@
-# Shminer Event Simulator
+# Czak Event Sim
 
-Web-based event simulator for [Shminer](https://shminer.miraheze.org/wiki/Events), ported from the original [Lua/Love2D version](https://github.com/Kommandant-Julk/shminer_event_sim).
+Web-based event simulator for [Shminer](https://shminer.miraheze.org/wiki/Events).
 
-Single-file HTML/JS/CSS - no dependencies, no build step. Open `index.html` in a browser.
+Forked from [Kommandant-Julk/shminer_event_sim](https://github.com/Kommandant-Julk/shminer_event_sim) (Lua/Love2D) and rewritten as a single-file HTML/JS/CSS web app - no dependencies, no build step. Open `index.html` in a browser.
 
 ## Bug Fixes vs Original
 
