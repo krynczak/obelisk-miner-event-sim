@@ -359,19 +359,26 @@ function avgEvent_short(player,enemy){
   return[finalWave,finalSub,totalTime];
 }
 const GAIN_SIM_RUNS=200;
-function quickSim(p,e){
-  let totalWave=0,totalSub=0,totalTime=0;
-  for(let i=0;i<GAIN_SIM_RUNS;i++){
-    const r=eventTest(p,e);
-    totalWave+=r[0];totalSub+=r[1];totalTime+=r[2];
-  }
-  return[totalWave/GAIN_SIM_RUNS,Math.round(totalSub/GAIN_SIM_RUNS),totalTime/GAIN_SIM_RUNS];
-}
 function GiveApproxWithUpgraded(ti,uj){
   upgrades[ti][uj]=(upgrades[ti][uj]||0)+1;
   const{p,e}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
   upgrades[ti][uj]--;
-  return quickSim(p,e);
+  return avgEvent_short(p,e);
+}
+// Monte Carlo comparison: returns gain in res/min, or 0 if no measurable difference
+function mcGainForUpgrade(ti,uj){
+  const{p:bp,e:be}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
+  upgrades[ti][uj]=(upgrades[ti][uj]||0)+1;
+  const{p:up,e:ue}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
+  upgrades[ti][uj]--;
+  // Run paired simulations to reduce variance
+  let baseTotal=0,upgTotal=0;
+  for(let i=0;i<GAIN_SIM_RUNS;i++){
+    const br=eventTest(bp,be),ur=eventTest(up,ue);
+    baseTotal+=resourcesPerMinute(br,currentResource,bp);
+    upgTotal+=resourcesPerMinute(ur,currentResource,up);
+  }
+  return Math.max(0,(upgTotal-baseTotal)/GAIN_SIM_RUNS);
 }
 
 // ── UI DATA ──────────────────────────────────────────────────
@@ -595,8 +602,11 @@ function buildUpgradesDOM(){
 }
 
 function refreshUpgradeValues(){
-  if(!approxCache['base'])approxCache['base']=GiveApproxWithUpgraded(0,7);
-  const baseRPM=resourcesPerMinute(approxCache['base'],currentResource,cachedP||playerStatsBase);
+  if(!approxCache['baseRPM']){
+    const baseSim=avgEvent_short(cachedP||playerStatsBase,cachedE||enemyStatsBase);
+    approxCache['baseRPM']=resourcesPerMinute(baseSim,currentResource,cachedP||playerStatsBase);
+  }
+  const baseRPM=approxCache['baseRPM'];
 
   // First pass: collect all gains
   const allGains=[];
@@ -613,9 +623,13 @@ function refreshUpgradeValues(){
       if(isCap){for(let u=0;u<upgradeNames[ti].length;u++){if(u!==uj&&(upgrades[ti][u]||0)>=currentMaxLvl(ti,u)){capUseful=true;break}}}
       if(!locked&&cachedP&&lvl<maxL&&(!isCap||capUseful)){
         const key=`${ti}_${uj}`;
-        if(!approxCache[key])approxCache[key]=GiveApproxWithUpgraded(ti,uj);
-        const ad=approxCache[key];
-        if(ad[0]>0)gain=resourcesPerMinute(ad,currentResource,cachedP)-baseRPM;
+        if(!approxCache[key]){
+          const det=GiveApproxWithUpgraded(ti,uj);
+          const detGain=det[0]>0?resourcesPerMinute(det,currentResource,cachedP)-baseRPM:0;
+          // If deterministic sees a gain, use it (stable). Otherwise try Monte Carlo.
+          approxCache[key]=detGain>0?detGain:mcGainForUpgrade(ti,uj);
+        }
+        gain=approxCache[key];
       }
       const upgCost=locked||lvl>=maxL?0:costs[ti][uj]*Math.pow(1.25,lvl);
       const efficiency=upgCost>0&&gain>0?gain/upgCost:0;
