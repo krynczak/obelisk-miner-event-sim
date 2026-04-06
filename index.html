@@ -358,7 +358,7 @@ function avgEvent_short(player,enemy){
   }
   return[finalWave,finalSub,totalTime];
 }
-const GAIN_SIM_RUNS=100;
+const GAIN_SIM_RUNS=200;
 function quickSim(p,e){
   let totalWave=0,totalSub=0,totalTime=0;
   for(let i=0;i<GAIN_SIM_RUNS;i++){
@@ -607,7 +607,11 @@ function refreshUpgradeValues(){
       const locked=presReq>prestigeCount||needsPrev;
       const maxL=currentMaxLvl(ti,uj),lvl=upgrades[ti][uj]||0;
       let gain=0;
-      if(!locked&&cachedP&&lvl<maxL){
+      const isCap=capUpgIdx[ti]===uj||(ti===3&&uj===CAP_OF_CAPS_IDX);
+      // Cap upgrades only matter if some upgrade in the tier is at its max level
+      let capUseful=false;
+      if(isCap){for(let u=0;u<upgradeNames[ti].length;u++){if(u!==uj&&(upgrades[ti][u]||0)>=currentMaxLvl(ti,u)){capUseful=true;break}}}
+      if(!locked&&cachedP&&lvl<maxL&&(!isCap||capUseful)){
         const key=`${ti}_${uj}`;
         if(!approxCache[key])approxCache[key]=GiveApproxWithUpgraded(ti,uj);
         const ad=approxCache[key];
