@@ -602,7 +602,10 @@ function refreshUpgradeValues(){
   const allGains=[];
   for(let ti=0;ti<4;ti++){
     for(let uj=0;uj<upgradeNames[ti].length;uj++){
-      const presReq=prestigeUnlocked[ti][uj],locked=presReq>prestigeCount;
+      const presReq=prestigeUnlocked[ti][uj];
+      const lastIdx=upgradeNames[ti].length-1;
+      const needsPrev=uj===lastIdx&&lastIdx>0&&(upgrades[ti][lastIdx-1]||0)<1;
+      const locked=presReq>prestigeCount||needsPrev;
       const maxL=currentMaxLvl(ti,uj),lvl=upgrades[ti][uj]||0;
       let gain=0;
       if(!locked&&cachedP&&lvl<maxL){
@@ -613,7 +616,7 @@ function refreshUpgradeValues(){
       }
       const upgCost=locked||lvl>=maxL?0:costs[ti][uj]*Math.pow(1.25,lvl);
       const efficiency=upgCost>0&&gain>0?gain/upgCost:0;
-      allGains.push({ti,uj,gain,efficiency,upgCost,locked,lvl,maxL,presReq});
+      allGains.push({ti,uj,gain,efficiency,upgCost,locked,needsPrev,lvl,maxL,presReq});
     }
   }
 
@@ -621,7 +624,7 @@ function refreshUpgradeValues(){
   const maxGain=Math.max(1,...allGains.map(g=>g.gain));
 
   // Second pass: update DOM
-  for(const{ti,uj,gain,locked,lvl,maxL,presReq}of allGains){
+  for(const{ti,uj,gain,locked,needsPrev,lvl,maxL,presReq}of allGains){
     const maxed=!locked&&lvl>=maxL;
     document.getElementById(`upg-row-${ti}-${uj}`).className=`upg-row${locked?' locked':maxed?' maxed':''}`;
     const inp=document.getElementById(`upg-inp-${ti}-${uj}`);
@@ -629,7 +632,7 @@ function refreshUpgradeValues(){
     document.getElementById(`upg-max-${ti}-${uj}`).textContent=`/${maxL}`;
     document.getElementById(`upg-bm-${ti}-${uj}`).disabled=lvl<=0||locked;
     document.getElementById(`upg-bp-${ti}-${uj}`).disabled=lvl>=maxL||locked;
-    document.getElementById(`upg-name-${ti}-${uj}`).textContent=locked?`Unlocks at Prestige ${presReq}`:upgradeNames[ti][uj];
+    document.getElementById(`upg-name-${ti}-${uj}`).textContent=locked?(needsPrev?'Level up previous to unlock':`Unlocks at Prestige ${presReq}`):upgradeNames[ti][uj];
     document.getElementById(`upg-cost-${ti}-${uj}`).textContent=locked?'':formatNumber(costs[ti][uj]*Math.pow(1.25,lvl));
     const gainStr=locked||lvl>=maxL?'':gain>0?gain.toFixed(1):'< 0.1';
     document.getElementById(`upg-gain-${ti}-${uj}`).textContent=gainStr;
