@@ -55,6 +55,11 @@ Forked from [Kommandant-Julk/shminer_event_sim](https://github.com/Kommandant-Ju
 
 ## Changelog
 
+### v1.3.1
+- Fix: tooltips now open to the right (no longer clipped off-screen on left column)
+- Fix: changelog modal scrollable with zoom
+- Changelog button (?) next to version number for discoverability
+
 ### v1.3.0
 - Help tooltips (?) on every panel with contextual explanations
 - Changelog modal: click version number in header to view changelog

@@ -43,20 +43,18 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 .help-btn{background:var(--s3);border:1px solid var(--b1);color:var(--t3);font-family:'Chakra Petch',sans-serif;font-size:8px;font-weight:700;width:14px;height:14px;line-height:12px;text-align:center;cursor:pointer;padding:0;flex-shrink:0;border-radius:2px;transition:all .15s;margin-left:auto}
 .help-btn:hover{color:var(--acc);border-color:var(--acc-dim)}
 .help-wrap{position:relative;display:inline}
-.help-popup{display:none;position:absolute;top:22px;right:0;background:var(--s1);border:1px solid var(--b2);padding:10px 12px;font-family:'Space Mono',monospace;font-size:10px;font-weight:400;color:var(--t2);line-height:1.5;letter-spacing:0;text-transform:none;max-width:300px;min-width:200px;z-index:20;white-space:normal}
+.help-popup{display:none;position:absolute;top:22px;left:0;background:var(--s1);border:1px solid var(--b2);padding:10px 12px;font-family:'Space Mono',monospace;font-size:10px;font-weight:400;color:var(--t2);line-height:1.5;letter-spacing:0;text-transform:none;max-width:300px;min-width:200px;z-index:20;white-space:normal}
 .help-popup.open{display:block}
 
 /* ── Changelog modal ────────────────────── */
-.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:100;justify-content:center;align-items:flex-start;padding:40px 20px}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,.7);z-index:100;justify-content:center;align-items:flex-start;padding:40px 20px;overflow-y:auto}
 .modal-overlay.open{display:flex}
-.modal-content{background:var(--s1);border:1px solid var(--b2);max-width:600px;width:100%;max-height:80vh;overflow-y:auto;padding:20px 24px;position:relative}
+.modal-content{background:var(--s1);border:1px solid var(--b2);max-width:600px;width:100%;max-height:calc(100vh / 1.33 - 80px);overflow-y:auto;padding:20px 24px;position:relative}
 .modal-content h2{font-family:'Chakra Petch',sans-serif;font-size:14px;font-weight:700;color:var(--acc);margin:0 0 12px;letter-spacing:.06em}
 .modal-content h3{font-family:'Chakra Petch',sans-serif;font-size:11px;font-weight:600;color:var(--t1);margin:14px 0 6px;letter-spacing:.04em}
 .modal-content li{font-size:10px;color:var(--t2);line-height:1.6;margin-bottom:2px}
 .modal-close{position:absolute;top:8px;right:12px;background:none;border:none;color:var(--t3);font-size:18px;cursor:pointer;padding:4px}
 .modal-close:hover{color:var(--t1)}
-.version{cursor:pointer}
-.version:hover{color:var(--acc-dim)}
 
 /* ── Onboarding banner ──────────────────── */
 .onboard-banner{background:var(--s3);border:1px solid var(--b2);padding:8px 14px;margin:10px 10px 0;font-size:10px;color:var(--t2);display:flex;align-items:center;gap:10px}
@@ -166,7 +164,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 <body>
 
 <header class="header">
-  <div class="brand">⛏ OBELISK MINER EVENT SIM <span class="version" onclick="openChangelog()">v1.3.0</span></div>
+  <div class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v1.3.1</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()" style="margin-left:2px">?</button></div>
   <button class="res-btn" onclick="approxCache={};runAndRender()">Run Sim ▶</button>
   <button class="res-btn" onclick="cycleResource()">Cycle Resource <span id="res-num">1</span> ▸</button>
   <button class="res-btn" id="btn-export" onclick="exportState()">Export ▾</button>
