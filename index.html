@@ -141,7 +141,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 <body>
 
 <header class="header">
-  <div class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v1.2.3</span></div>
+  <div class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v1.2.4</span></div>
   <button class="res-btn" onclick="approxCache={};runAndRender()">Run Sim ▶</button>
   <button class="res-btn" onclick="cycleResource()">Cycle Resource <span id="res-num">1</span> ▸</button>
   <button class="res-btn" id="btn-export" onclick="exportState()">Export ▾</button>
@@ -779,6 +779,7 @@ function budgetPlan(){
 function renderBudgetResults(ordered,summary,remaining){
   const el=document.getElementById('budget-results');
   if(ordered.length===0){el.innerHTML='<div class="bud-empty">No purchases possible with this budget.</div>';return}
+  ordered.sort((a,b)=>summary[a].ti-summary[b].ti);
   const rows=ordered.map(k=>{
     const{ti,uj,count,totalCost,startLvl}=summary[k];
     return`<div class="bud-row" onclick="budgetBuy(${ti},${uj},${startLvl+count},${Math.round(totalCost)})">`+

@@ -55,6 +55,9 @@ Forked from [Kommandant-Julk/shminer_event_sim](https://github.com/Kommandant-Ju
 
 ## Changelog
 
+### v1.2.4
+- Budget planner results sorted by tier (T1, T2, T3, T4)
+
 ### v1.2.3
 - Click budget planner results now applies upgrade, subtracts cost from budget input, and re-calculates remaining buy order
 
