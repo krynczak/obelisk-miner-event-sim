@@ -103,9 +103,10 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 .wpct{color:var(--t2);font-variant-numeric:tabular-nums;font-size:9px}
 
 /* ── Upgrades ────────────────────────────── */
-.tier-hdr{font-family:'Chakra Petch',sans-serif;font-size:9px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--t3);padding:6px 0 3px;border-bottom:1px solid var(--b1);margin-bottom:2px}
+.tier-hdr{font-family:'Chakra Petch',sans-serif;font-size:9px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--t3);padding:6px 0 3px;border-bottom:1px solid var(--b1);margin-bottom:2px;display:flex;justify-content:space-between}
+.tier-res{font-weight:400;color:var(--t3);letter-spacing:.08em}
 .tier-hdr:first-child{padding-top:2px}
-.upg-row{position:relative;display:flex;align-items:center;height:22px;margin-bottom:1px;background:var(--s1);border:1px solid transparent;overflow:hidden;transition:border-color .1s}
+.upg-row{position:relative;display:flex;align-items:center;min-height:22px;margin-bottom:1px;background:var(--s1);border:1px solid transparent;overflow:hidden;transition:border-color .1s}
 .upg-row:hover{border-color:var(--b1)}
 .upg-row.locked{opacity:.4}
 .upg-row.maxed{border-left:2px solid var(--acc-dim);background:var(--s2)}
@@ -123,7 +124,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 .upg-maxl{font-size:9px;color:var(--t3);width:22px;position:relative;z-index:1}
 .upg-data{display:flex;align-items:center;flex:1;min-width:0;position:relative;z-index:1;gap:3px}
 .upg-cost{font-size:9px;color:var(--t2);width:32px;flex-shrink:0;text-align:right}
-.upg-name{flex:1;font-size:10px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+.upg-name{flex:1;font-size:10px;color:var(--t1);white-space:normal;line-height:1.3;padding:2px 4px}
 .upg-gain-val{font-size:10px;color:var(--gain);width:44px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums;padding-right:4px}
 
 /* ── Prestige + gems ─────────────────────── */
@@ -141,7 +142,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 ::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
 
 /* ── Flicker fix ─────────────────────────── */
-#sim-results-panel{transition:opacity .12s}
+#sim-results-panel{transition:opacity .12s;border-color:var(--acc-dim)}
 #sim-results-panel.simulating{opacity:.35;pointer-events:none}
 
 /* ── Budget planner ──────────────────────── */
@@ -159,13 +160,20 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 .bud-remaining{font-size:9px;color:var(--t2);padding-top:6px;border-top:1px solid var(--b1);margin-top:4px;display:flex;gap:12px;flex-wrap:wrap}
 .bud-remaining b{color:var(--t1)}
 .bud-empty{font-size:10px;color:var(--t3);padding:4px 0}
+
+/* ── Click feedback ─────────────────────── */
+@keyframes flash{0%{background:var(--acc-glow)}100%{background:var(--s3)}}
+.pick:active,.bud-row:active{animation:flash .3s}
+.ubtn:active:not(:disabled){background:var(--acc-dim)}
+.res-btn:active{background:var(--b2)}
+.btn-run:active{opacity:.6}
 </style>
 </head>
 <body>
 
 <header class="header">
-  <div class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v1.4.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()" style="margin-left:2px">?</button></div>
-  <button class="res-btn" onclick="approxCache={};runAndRender()">Run Sim ▶</button>
+  <div class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v1.5.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()" style="margin-left:2px">?</button></div>
+  <button class="btn-run" style="width:auto;padding:5px 14px;margin:0;font-size:9px" onclick="approxCache={};runAndRender()">Run Sim ▶</button>
   <button class="res-btn" onclick="cycleResource()">Cycle Resource <span id="res-num">1</span> ▸</button>
   <button class="res-btn" id="btn-export" onclick="exportState()">Export ▾</button>
   <button class="res-btn" onclick="importState()">Import ▴</button>
@@ -520,6 +528,7 @@ function changePrestige(delta){
   prestigeCount=next;approxCache={};runAndRender();
 }
 function prestigeReset(){
+  if(!confirm('Reset all tier upgrades to 0?'))return;
   for(let ti=0;ti<4;ti++)for(let uj=0;uj<upgrades[ti].length;uj++)upgrades[ti][uj]=0;
   approxCache={};runAndRender();
 }
@@ -619,7 +628,7 @@ function buildUpgradesDOM(){
   col.appendChild(hdr);
   for(let ti=0;ti<4;ti++){
     const sec=document.createElement('div');sec.className='tier-section';
-    const hdr=document.createElement('div');hdr.className='tier-hdr';hdr.textContent=`Tier ${ti+1}`;sec.appendChild(hdr);
+    const hdr=document.createElement('div');hdr.className='tier-hdr';hdr.innerHTML=`Tier ${ti+1} <span class="tier-res">Res ${ti+1}</span>`;sec.appendChild(hdr);
     for(let uj=0;uj<upgradeNames[ti].length;uj++){
       const row=document.createElement('div');row.id=`upg-row-${ti}-${uj}`;row.className='upg-row';
       row.innerHTML=

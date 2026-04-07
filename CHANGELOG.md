@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.5.0
+- Upgrade names always fully visible (multi-line wrap instead of truncation)
+- Click feedback: flash animation on Next Buy and Budget Planner rows
+- Active/pressed states on all buttons (+/-, Run Sim, Calculate)
+- Run Sim button visually distinct (accent color, stands out from other header buttons)
+- Simulation panel highlighted with accent border
+- Tier headers show resource type (e.g. "Tier 1 - Res 1")
+- Prestige Reset requires confirmation dialog
+
 ## v1.4.0
 - Budget planner now uses Monte Carlo gains from Next Buy cache as fallback when deterministic shows zero gain
 - Fixes missing T1/T2 upgrade suggestions (HP, prestige bonus, etc.) in budget planner
