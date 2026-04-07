@@ -7,6 +7,7 @@ Single-file HTML/JS/CSS app at `index.html`. No build system. Deployed via GitHu
 - Upgrade names, costs, and prestige unlocks must match the [official wiki](https://shminer.miraheze.org/wiki/Events)
 - All user-facing text in English
 - Version bump (semver) and CHANGELOG.md entry on every release
+- After every push: monitor GitHub Pages deploy (`gh run list --limit 1`) and notify when the change is live
 
 ## Reference
 - `ARCHITECTURE.md` - code structure, game formulas, gain calculation system, variable names
