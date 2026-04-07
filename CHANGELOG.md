@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.3.3
+- Fix: budget planner now suggests T1/T2 upgrades even when deterministic gain is zero (buys cheapest available as fallback)
+- Fix: budget planner respects sequential unlock rule (each upgrade requires previous to be bought)
+
 ## v1.3.2
 - Move changelog from README.md to dedicated CHANGELOG.md
 - Changelog modal now fetches from CHANGELOG.md
