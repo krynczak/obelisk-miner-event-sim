@@ -55,6 +55,12 @@ Forked from [Kommandant-Julk/shminer_event_sim](https://github.com/Kommandant-Ju
 
 ## Changelog
 
+### v1.3.0
+- Help tooltips (?) on every panel with contextual explanations
+- Changelog modal: click version number in header to view changelog
+- First-time onboarding banner for new users
+- Tooltips support hover (desktop), click (touch), Escape to dismiss
+
 ### v1.2.4
 - Budget planner results sorted by tier (T1, T2, T3, T4)
 

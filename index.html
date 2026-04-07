@@ -37,7 +37,32 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 /* ── Panel ───────────────────────────────── */
 .panel{background:var(--s2);border:1px solid var(--b1);padding:10px;margin-bottom:8px}
 .panel:last-child{margin-bottom:0}
-.ptitle{font-family:'Chakra Petch',sans-serif;font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid var(--b1)}
+.ptitle{font-family:'Chakra Petch',sans-serif;font-size:9px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin-bottom:7px;padding-bottom:5px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:6px}
+
+/* ── Help tooltips ──────────────────────── */
+.help-btn{background:var(--s3);border:1px solid var(--b1);color:var(--t3);font-family:'Chakra Petch',sans-serif;font-size:8px;font-weight:700;width:14px;height:14px;line-height:12px;text-align:center;cursor:pointer;padding:0;flex-shrink:0;border-radius:2px;transition:all .15s;margin-left:auto}
+.help-btn:hover{color:var(--acc);border-color:var(--acc-dim)}
+.help-wrap{position:relative;display:inline}
+.help-popup{display:none;position:absolute;top:22px;right:0;background:var(--s1);border:1px solid var(--b2);padding:10px 12px;font-family:'Space Mono',monospace;font-size:10px;font-weight:400;color:var(--t2);line-height:1.5;letter-spacing:0;text-transform:none;max-width:300px;min-width:200px;z-index:20;white-space:normal}
+.help-popup.open{display:block}
+
+/* ── Changelog modal ────────────────────── */
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:100;justify-content:center;align-items:flex-start;padding:40px 20px}
+.modal-overlay.open{display:flex}
+.modal-content{background:var(--s1);border:1px solid var(--b2);max-width:600px;width:100%;max-height:80vh;overflow-y:auto;padding:20px 24px;position:relative}
+.modal-content h2{font-family:'Chakra Petch',sans-serif;font-size:14px;font-weight:700;color:var(--acc);margin:0 0 12px;letter-spacing:.06em}
+.modal-content h3{font-family:'Chakra Petch',sans-serif;font-size:11px;font-weight:600;color:var(--t1);margin:14px 0 6px;letter-spacing:.04em}
+.modal-content li{font-size:10px;color:var(--t2);line-height:1.6;margin-bottom:2px}
+.modal-close{position:absolute;top:8px;right:12px;background:none;border:none;color:var(--t3);font-size:18px;cursor:pointer;padding:4px}
+.modal-close:hover{color:var(--t1)}
+.version{cursor:pointer}
+.version:hover{color:var(--acc-dim)}
+
+/* ── Onboarding banner ──────────────────── */
+.onboard-banner{background:var(--s3);border:1px solid var(--b2);padding:8px 14px;margin:10px 10px 0;font-size:10px;color:var(--t2);display:flex;align-items:center;gap:10px}
+.onboard-banner span{flex:1}
+.onboard-close{background:none;border:none;color:var(--t3);font-size:14px;cursor:pointer;padding:2px}
+.onboard-close:hover{color:var(--t1)}
 
 /* ── Stat rows ───────────────────────────── */
 .srow{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--b1);font-size:11px}
@@ -141,27 +166,32 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 <body>
 
 <header class="header">
-  <div class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v1.2.4</span></div>
+  <div class="brand">⛏ OBELISK MINER EVENT SIM <span class="version" onclick="openChangelog()">v1.3.0</span></div>
   <button class="res-btn" onclick="approxCache={};runAndRender()">Run Sim ▶</button>
   <button class="res-btn" onclick="cycleResource()">Cycle Resource <span id="res-num">1</span> ▸</button>
   <button class="res-btn" id="btn-export" onclick="exportState()">Export ▾</button>
   <button class="res-btn" onclick="importState()">Import ▴</button>
 </header>
 
+<div id="onboard-banner" class="onboard-banner" style="display:none">
+  <span>Enter your in-game upgrade levels on the right panel to get started.</span>
+  <button class="onboard-close" onclick="dismissOnboard()">✕</button>
+</div>
+
 <div class="layout">
 
   <!-- LEFT -->
   <div>
     <div class="panel">
-      <div class="ptitle">Player</div>
+      <div class="ptitle">Player <span class="help-wrap"><button class="help-btn" aria-label="Help" onclick="toggleHelp(this)">?</button><div class="help-popup">Your miner's current stats. These match the in-game Player Stats screen.</div></span></div>
       <div id="player-stats"></div>
     </div>
     <div class="panel">
-      <div class="ptitle">Enemy</div>
+      <div class="ptitle">Enemy <span class="help-wrap"><button class="help-btn" aria-label="Help" onclick="toggleHelp(this)">?</button><div class="help-popup">Key combat thresholds. "1-shot kill until" = highest wave you kill in one hit. "Enemy deals 1 dmg until" = wave where enemy base damage exceeds 1. "Enemy crits after" = wave where enemies start critting.</div></span></div>
       <div id="enemy-stats"></div>
     </div>
     <div class="panel">
-      <div class="ptitle">Prestige &amp; Gems</div>
+      <div class="ptitle">Prestige &amp; Gems <span class="help-wrap"><button class="help-btn" aria-label="Help" onclick="toggleHelp(this)">?</button><div class="help-popup">Prestige resets tier upgrades but increases HP/damage multiplier by 10% per tier. Gems are permanent upgrades bought with gems. Milestone shows next unlock.</div></span></div>
       <div class="pres-row">
         <span class="pres-lbl">Prestiges</span>
         <button class="ubtn" tabindex="-1" onpointerdown="startHold(()=>changePrestige(-1))" onpointerup="stopHold()" onpointercancel="stopHold()" onpointerleave="stopHold()">-</button>
@@ -178,15 +208,15 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
   <!-- CENTER -->
   <div>
     <div class="panel" id="sim-results-panel">
-      <div class="ptitle">Simulation — 1000 runs</div>
+      <div class="ptitle">Simulation — 1000 runs <span class="help-wrap"><button class="help-btn" aria-label="Help" onclick="toggleHelp(this)">?</button><div class="help-popup">1000 random event runs (Monte Carlo). Shows average wave, time, and currencies earned. Worst/best show the range of outcomes.</div></span></div>
       <div class="sim-loading">Simulating…</div>
     </div>
     <div class="panel">
-      <div class="ptitle">Next Buy — best per tier</div>
+      <div class="ptitle">Next Buy — best per tier <span class="help-wrap"><button class="help-btn" aria-label="Help" onclick="toggleHelp(this)">?</button><div class="help-popup">Best upgrade per tier ranked by gain/cost efficiency for the selected resource type. Click to buy +1 level (Shift+click for +10).</div></span></div>
       <div id="top-picks"><div class="picks-empty">Calculating…</div></div>
     </div>
     <div class="panel">
-      <div class="ptitle">Budget Planner</div>
+      <div class="ptitle">Budget Planner <span class="help-wrap"><button class="help-btn" aria-label="Help" onclick="toggleHelp(this)">?</button><div class="help-popup">Enter available currencies, calculate optimal buy order. Click a result to apply and deduct from budget. Supports shorthand: 4.21m, 168k.</div></span></div>
       <div class="bud-inputs">
         <div class="bud-inp-grp"><label class="bud-inp-lbl">Res 1</label><input id="bud-inp-1" class="bud-inp" placeholder="4.21m" onfocus="this.select()"></div>
         <div class="bud-inp-grp"><label class="bud-inp-lbl">Res 2</label><input id="bud-inp-2" class="bud-inp" placeholder="168k" onfocus="this.select()"></div>
@@ -197,7 +227,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
       <div id="budget-results"></div>
     </div>
     <div class="panel">
-      <div class="ptitle">Wave Distribution</div>
+      <div class="ptitle">Wave Distribution <span class="help-wrap"><button class="help-btn" aria-label="Help" onclick="toggleHelp(this)">?</button><div class="help-popup">Wave histogram across 1000 runs. Gold bar = peak wave.</div></span></div>
       <div id="wave-chart"></div>
     </div>
   </div>
@@ -205,6 +235,14 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
   <!-- RIGHT -->
   <div id="upgrades-col"></div>
 
+</div>
+
+<div id="changelog-modal" class="modal-overlay" onclick="if(event.target===this)closeChangelog()">
+  <div class="modal-content">
+    <button class="modal-close" onclick="closeChangelog()">✕</button>
+    <h2>Changelog</h2>
+    <div id="changelog-body">Loading...</div>
+  </div>
 </div>
 
 <script>
@@ -578,6 +616,9 @@ function refreshGemValues(){
 
 function buildUpgradesDOM(){
   const col=document.getElementById('upgrades-col');col.innerHTML='';
+  const hdr=document.createElement('div');hdr.className='ptitle';
+  hdr.innerHTML='Upgrades <span class="help-wrap"><button class="help-btn" aria-label="Help" onclick="toggleHelp(this)">?</button><div class="help-popup">Green bars = relative gain per upgrade. "< 0.1" = gain too small to measure. Type values directly, Shift+click +/- for 10 levels.</div></span>';
+  col.appendChild(hdr);
   for(let ti=0;ti<4;ti++){
     const sec=document.createElement('div');sec.className='tier-section';
     const hdr=document.createElement('div');hdr.className='tier-hdr';hdr.textContent=`Tier ${ti+1}`;sec.appendChild(hdr);
@@ -821,11 +862,39 @@ function runAndRender(){
   saveState();
 }
 
+// ── TOOLTIPS ─────────────────────────────────────────────────
+function toggleHelp(btn){
+  const popup=btn.nextElementSibling;
+  const wasOpen=popup.classList.contains('open');
+  document.querySelectorAll('.help-popup.open').forEach(p=>p.classList.remove('open'));
+  if(!wasOpen)popup.classList.add('open');
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.help-wrap'))document.querySelectorAll('.help-popup.open').forEach(p=>p.classList.remove('open'))});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.help-popup.open').forEach(p=>p.classList.remove('open'));closeChangelog()}});
+
+// ── CHANGELOG ────────────────────────────────────────────────
+function openChangelog(){
+  const modal=document.getElementById('changelog-modal');
+  const body=document.getElementById('changelog-body');
+  modal.classList.add('open');
+  fetch('README.md').then(r=>{if(!r.ok)throw 0;return r.text()}).then(md=>{
+    const match=md.match(/## Changelog\n([\s\S]*?)(?=\n## (?!#)|$)/);
+    if(!match){body.textContent='No changelog found.';return}
+    body.innerHTML=match[1].replace(/### (v[\d.]+)/g,'<h3>$1</h3>').replace(/^- (.+)$/gm,'<li>$1</li>').replace(/(<li>[\s\S]*?<\/li>)/g,'<ul>$1</ul>').replace(/<\/ul>\s*<ul>/g,'');
+  }).catch(()=>{body.textContent='See README.md for changelog.'});
+}
+function closeChangelog(){document.getElementById('changelog-modal').classList.remove('open')}
+
+// ── ONBOARDING ───────────────────────────────────────────────
+function showOnboard(){if(!localStorage.getItem('shminer_state')&&!localStorage.getItem('shminer_onboard_dismissed'))document.getElementById('onboard-banner').style.display=''}
+function dismissOnboard(){document.getElementById('onboard-banner').style.display='none';localStorage.setItem('shminer_onboard_dismissed','1')}
+
 // Init
 loadState();
 buildUpgradesDOM();
 buildGemsDOM();
 runAndRender();
+showOnboard();
 </script>
 </body>
 </html>
