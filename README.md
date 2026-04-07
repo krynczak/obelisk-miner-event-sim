@@ -55,6 +55,10 @@ Forked from [Kommandant-Julk/shminer_event_sim](https://github.com/Kommandant-Ju
 
 ## Changelog
 
+### v1.2.2
+- Click budget planner results to apply upgrades (sets level to target)
+- Increase budget planner detail font size for readability
+
 ### v1.2.1
 - Fix: hybrid gain calculation - deterministic first, Monte Carlo only for marginal gains. Prevents false positives where attack damage showed large gains when player already one-shots enemies.
 
