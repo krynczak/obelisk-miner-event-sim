@@ -55,6 +55,9 @@ Forked from [Kommandant-Julk/shminer_event_sim](https://github.com/Kommandant-Ju
 
 ## Changelog
 
+### v1.2.3
+- Click budget planner results now applies upgrade, subtracts cost from budget input, and re-calculates remaining buy order
+
 ### v1.2.2
 - Click budget planner results to apply upgrades (sets level to target)
 - Increase budget planner detail font size for readability
