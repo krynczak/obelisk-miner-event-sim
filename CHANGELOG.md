@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.4.0
+- Budget planner now uses Monte Carlo gains from Next Buy cache as fallback when deterministic shows zero gain
+- Fixes missing T1/T2 upgrade suggestions (HP, prestige bonus, etc.) in budget planner
+- Removes v1.3.3 "cheapest fallback" band-aid in favor of unified gain source
+
 ## v1.3.3
 - Fix: budget planner now suggests T1/T2 upgrades even when deterministic gain is zero (buys cheapest available as fallback)
 - Fix: budget planner respects sequential unlock rule (each upgrade requires previous to be bought)
