@@ -42,9 +42,11 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 /* ── Help tooltips ──────────────────────── */
 .help-btn{background:var(--s3);border:1px solid var(--b1);color:var(--t3);font-family:'Chakra Petch',sans-serif;font-size:8px;font-weight:700;width:14px;height:14px;line-height:12px;text-align:center;cursor:pointer;padding:0;flex-shrink:0;border-radius:2px;transition:all .15s;margin-left:auto}
 .help-btn:hover{color:var(--acc);border-color:var(--acc-dim)}
-.opt-btn{background:var(--s3);border:1px solid var(--b1);color:var(--t3);font-family:'Chakra Petch',sans-serif;font-size:8px;font-weight:700;padding:1px 5px;cursor:pointer;border-radius:2px;transition:all .15s;margin-left:6px;vertical-align:middle;letter-spacing:.06em;text-transform:uppercase}
-.opt-btn:hover{color:var(--acc);border-color:var(--acc-dim)}
-.opt-btn.active{background:var(--acc-dim);border-color:var(--acc);color:var(--acc)}
+.opt-seg{display:inline-flex;margin-left:8px;border:1px solid var(--b1);border-radius:3px;overflow:hidden;vertical-align:middle}
+.opt-seg-btn{background:var(--s3);border:none;border-right:1px solid var(--b1);color:var(--t3);font-family:'Chakra Petch',sans-serif;font-size:8px;font-weight:700;padding:2px 7px;cursor:pointer;transition:all .15s;letter-spacing:.06em;text-transform:uppercase}
+.opt-seg-btn:last-child{border-right:none}
+.opt-seg-btn:hover:not(.active){color:var(--acc)}
+.opt-seg-btn.active{background:var(--acc-dim);color:var(--acc)}
 .help-wrap{position:relative;display:inline}
 .help-popup{display:none;position:absolute;top:22px;left:0;background:var(--s1);border:1px solid var(--b2);padding:10px 12px;font-family:'Space Mono',monospace;font-size:10px;font-weight:400;color:var(--t2);line-height:1.5;letter-spacing:0;text-transform:none;max-width:300px;min-width:200px;z-index:20;white-space:normal}
 .help-popup.open{display:block}
@@ -175,7 +177,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 <body>
 
 <header class="header">
-  <div class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v1.6.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()" style="margin-left:2px">?</button></div>
+  <div class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v1.7.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()" style="margin-left:2px">?</button></div>
   <button class="btn-run" style="width:auto;padding:5px 14px;margin:0;font-size:9px" onclick="approxCache={};runAndRender()">Run Sim ▶</button>
   <button class="res-btn" onclick="cycleResource()">Cycle Resource <span id="res-num">1</span> ▸</button>
   <button class="res-btn" id="btn-export" onclick="exportState()">Export ▾</button>
@@ -221,16 +223,16 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
       <div class="sim-loading">Simulating…</div>
     </div>
     <div class="panel">
-      <div class="ptitle">Next Buy — best per tier <button id="opt-toggle" class="opt-btn" onclick="toggleOptimizeMode()">res/min</button><span class="help-wrap"><button class="help-btn" aria-label="Help" onclick="toggleHelp(this)">?</button><div class="help-popup">Best upgrade per tier ranked by gain/cost efficiency. Click to buy +1 level (Shift+click for +10).<br><br><b>res/min:</b> ranks by farming speed - best when grinding resources.<br><b>max wave:</b> ranks by average wave reached - best when pushing for prestige/rewards. Attack damage is deprioritized once you already one-shot enemies; HP, block, and speed rise to the top.</div></span></div>
+      <div class="ptitle">Next Buy — best per tier <span class="opt-seg"><button class="opt-seg-btn active" id="opt-btn-rpm" onclick="setOptimizeMode('rpm')">res/min</button><button class="opt-seg-btn" id="opt-btn-wave" onclick="setOptimizeMode('wave')">max wave</button></span><span class="help-wrap"><button class="help-btn" aria-label="Help" onclick="toggleHelp(this)">?</button><div class="help-popup">Best upgrade per tier ranked by gain/cost efficiency. Click to buy +1 level (Shift+click for +10).<br><br><b>res/min:</b> ranks by farming speed - best when grinding resources.<br><b>max wave:</b> ranks by average wave reached - best when pushing for prestige/rewards. Attack damage is deprioritized once you already one-shot enemies; HP, block, and speed rise to the top.</div></span></div>
       <div id="top-picks"><div class="picks-empty">Calculating…</div></div>
     </div>
     <div class="panel">
       <div class="ptitle">Budget Planner <span class="help-wrap"><button class="help-btn" aria-label="Help" onclick="toggleHelp(this)">?</button><div class="help-popup">Enter available currencies, calculate optimal buy order. Click a result to apply and deduct from budget. Supports shorthand: 4.21m, 168k.</div></span></div>
       <div class="bud-inputs">
-        <div class="bud-inp-grp"><label class="bud-inp-lbl">Res 1</label><input id="bud-inp-1" class="bud-inp" placeholder="4.21m" onfocus="this.select()"></div>
-        <div class="bud-inp-grp"><label class="bud-inp-lbl">Res 2</label><input id="bud-inp-2" class="bud-inp" placeholder="168k" onfocus="this.select()"></div>
-        <div class="bud-inp-grp"><label class="bud-inp-lbl">Res 3</label><input id="bud-inp-3" class="bud-inp" placeholder="13.9k" onfocus="this.select()"></div>
-        <div class="bud-inp-grp"><label class="bud-inp-lbl">Res 4</label><input id="bud-inp-4" class="bud-inp" placeholder="15.6k" onfocus="this.select()"></div>
+        <div class="bud-inp-grp"><label class="bud-inp-lbl">Res 1</label><input id="bud-inp-1" class="bud-inp" placeholder="4.21m" onfocus="this.select()" onkeydown="if(event.key==='Enter')budgetPlan()"></div>
+        <div class="bud-inp-grp"><label class="bud-inp-lbl">Res 2</label><input id="bud-inp-2" class="bud-inp" placeholder="168k" onfocus="this.select()" onkeydown="if(event.key==='Enter')budgetPlan()"></div>
+        <div class="bud-inp-grp"><label class="bud-inp-lbl">Res 3</label><input id="bud-inp-3" class="bud-inp" placeholder="13.9k" onfocus="this.select()" onkeydown="if(event.key==='Enter')budgetPlan()"></div>
+        <div class="bud-inp-grp"><label class="bud-inp-lbl">Res 4</label><input id="bud-inp-4" class="bud-inp" placeholder="15.6k" onfocus="this.select()" onkeydown="if(event.key==='Enter')budgetPlan()"></div>
       </div>
       <button class="btn-run" onclick="budgetPlan()">Calculate Buy Order</button>
       <div id="budget-results"></div>
@@ -538,11 +540,10 @@ function prestigeReset(){
   approxCache={};runAndRender();
 }
 function cycleResource(){currentResource=(currentResource%4)+1;document.getElementById('res-num').textContent=currentResource;saveState();refreshUpgradeValues()}
-function toggleOptimizeMode(){
-  optimizeMode=optimizeMode==='rpm'?'wave':'rpm';
-  const btn=document.getElementById('opt-toggle');
-  btn.textContent=optimizeMode==='rpm'?'res/min':'max wave';
-  btn.classList.toggle('active',optimizeMode==='wave');
+function setOptimizeMode(mode){
+  optimizeMode=mode;
+  document.getElementById('opt-btn-rpm').classList.toggle('active',mode==='rpm');
+  document.getElementById('opt-btn-wave').classList.toggle('active',mode==='wave');
   approxCache={};saveState();refreshUpgradeValues();
 }
 function setUpgrade(ti,uj,val){upgrades[ti][uj]=Math.max(0,Math.min(currentMaxLvl(ti,uj),parseInt(val)||0));approxCache={};runAndRender()}
@@ -666,7 +667,7 @@ function refreshUpgradeValues(){
   if(!approxCache['baseRPM']){
     const baseSim=avgEvent_short(cachedP||playerStatsBase,cachedE||enemyStatsBase);
     approxCache['baseRPM']=resourcesPerMinute(baseSim,currentResource,cachedP||playerStatsBase);
-    approxCache['baseWave']=baseSim[0];
+    approxCache['baseWave']=baseSim[0]+baseSim[1]/5;
   }
   const baseRPM=approxCache['baseRPM'];
 
@@ -688,8 +689,9 @@ function refreshUpgradeValues(){
         if(!approxCache[key]){
           const det=GiveApproxWithUpgraded(ti,uj);
           if(optimizeMode==='wave'){
-            const wGain=det[0]-(approxCache['baseWave']||0);
-            approxCache[key]=wGain>0?wGain:mcGainForUpgrade(ti,uj);
+            // Use fractional wave (wave + sub/5) for precision; no MC fallback to avoid noise masking 0-gain upgrades
+            const wGain=(det[0]+det[1]/5)-(approxCache['baseWave']||0);
+            approxCache[key]=wGain>0.005?wGain:0;
           } else {
             const detGain=det[0]>0?resourcesPerMinute(det,currentResource,cachedP)-baseRPM:0;
             // If deterministic sees a gain, use it (stable). Otherwise try Monte Carlo.
@@ -813,7 +815,7 @@ function budgetPlan(){
   for(let iter=0;iter<MAX_ITER;iter++){
     const{p:bp,e:be}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
     const bApx=avgEvent_short(bp,be);
-    const bMetric=optimizeMode==='wave'?bApx[0]:resourcesPerMinute(bApx,currentResource,bp);
+    const bMetric=optimizeMode==='wave'?bApx[0]+bApx[1]/5:resourcesPerMinute(bApx,currentResource,bp);
     let bestGain=0,bestTi=-1,bestUj=-1,bestCost=0;
     for(let ti=0;ti<4;ti++){
       if(res[ti]<=0)continue;
@@ -829,7 +831,7 @@ function budgetPlan(){
         const{p,e}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
         levels[ti][uj]--;
         const uApx=avgEvent_short(p,e);
-        const uMetric=optimizeMode==='wave'?uApx[0]:resourcesPerMinute(uApx,currentResource,p);
+        const uMetric=optimizeMode==='wave'?uApx[0]+uApx[1]/5:resourcesPerMinute(uApx,currentResource,p);
         const detGain=uMetric-bMetric;
         const gain=detGain>0?detGain:(approxCache[`${ti}_${uj}`]||0);
         if(gain>bestGain){bestGain=gain;bestTi=ti;bestUj=uj;bestCost=cost}
@@ -920,8 +922,8 @@ function dismissOnboard(){document.getElementById('onboard-banner').style.displa
 loadState();
 buildUpgradesDOM();
 buildGemsDOM();
-// Sync opt-toggle button state after loadState
-(function(){const btn=document.getElementById('opt-toggle');if(btn){btn.textContent=optimizeMode==='rpm'?'res/min':'max wave';btn.classList.toggle('active',optimizeMode==='wave');}})();
+// Sync opt-seg button state after loadState
+(function(){document.getElementById('opt-btn-rpm').classList.toggle('active',optimizeMode==='rpm');document.getElementById('opt-btn-wave').classList.toggle('active',optimizeMode==='wave');})();
 runAndRender();
 showOnboard();
 </script>

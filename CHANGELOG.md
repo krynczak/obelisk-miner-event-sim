@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.7.0
+- Fix max wave mode: use fractional wave (wave + sub/5) for precision; remove MC noise fallback so attack damage correctly shows 0 gain when player already one-shots
+- Budget planner now respects the res/min / max wave mode
+- Budget planner inputs: press Enter to calculate
+- Optimize mode toggle redesigned as a two-button segmented control for visibility
+
 ## v1.6.0
 - Optimize mode toggle (res/min vs max wave) in Next Buy and Budget Planner
 - res/min mode (default): ranks upgrades by farming efficiency, same as before
