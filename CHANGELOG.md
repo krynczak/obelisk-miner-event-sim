@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.0.0
+- Rewrite gain calculation: pre-compute offense-only upgrades (atk/crit/critDmg) at init
+- Attack and crit upgrades correctly show 0 gain when player always 1-shots, in any mode
+- Combo upgrades (+atk+HP) show correct gain - sim runs without holding atk constant
+- Removed GiveApproxWithUpgraded, atk-holding hack, and wave-mode MC branch
+- Single gain function (computeUpgradeGain) used by both Next Buy and Budget Planner
+- MC fallback only used in rpm mode when deterministic shows 0 for non-offense upgrades
+
 ## v1.9.0
 - When player always one-shots every wave they can reach, attack-only upgrades show 0 gain in both res/min and max wave modes
 - Combo upgrades (e.g. +Attack +HP) show gain only from the survival portion (atk held constant in sim)
