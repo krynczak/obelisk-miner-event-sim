@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.9.0
+- When player always one-shots every wave they can reach, attack-only upgrades show 0 gain in both res/min and max wave modes
+- Combo upgrades (e.g. +Attack +HP) show gain only from the survival portion (atk held constant in sim)
+- No MC noise fallback in this scenario - deterministic result is used directly
+
 ## v1.8.0
 - Fix max wave mode root cause: simulate with player.atk held at base level so attack damage upgrades produce exactly 0 wave gain when already one-shotting before death wave. Only HP, block, speed, and game speed upgrades can move the final wave.
 
