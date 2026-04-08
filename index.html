@@ -177,7 +177,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 <body>
 
 <header class="header">
-  <div class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v2.0.1</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()" style="margin-left:2px">?</button></div>
+  <div class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v2.1.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()" style="margin-left:2px">?</button></div>
   <button class="btn-run" style="width:auto;padding:5px 14px;margin:0;font-size:9px" onclick="approxCache={};runAndRender()">Run Sim ▶</button>
   <button class="res-btn" onclick="cycleResource()">Cycle Resource <span id="res-num">1</span> ▸</button>
   <button class="res-btn" id="btn-export" onclick="exportState()">Export ▾</button>
@@ -418,8 +418,8 @@ function avgEvent_short(player,enemy){
   return[finalWave,finalSub,totalTime];
 }
 const GAIN_SIM_RUNS=200;
-// Monte Carlo fallback for rpm mode: returns res/min gain, or 0 if no measurable difference.
-// Only called when deterministic sim shows 0 and upgrade is not offense-only.
+// Monte Carlo fallback: 200 paired runs, returns gain in the current optimizeMode metric.
+// Called when deterministic sim shows 0 for non-offense upgrades (HP, speed, block, etc.).
 function mcGainForUpgrade(ti,uj){
   const{p:bp,e:be}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
   upgrades[ti][uj]=(upgrades[ti][uj]||0)+1;
@@ -428,8 +428,8 @@ function mcGainForUpgrade(ti,uj){
   let baseTotal=0,upgTotal=0;
   for(let i=0;i<GAIN_SIM_RUNS;i++){
     const br=eventTest(bp,be),ur=eventTest(up,ue);
-    baseTotal+=resourcesPerMinute(br,currentResource,bp);
-    upgTotal+=resourcesPerMinute(ur,currentResource,up);
+    if(optimizeMode==='wave'){baseTotal+=br[0]+br[1]/5;upgTotal+=ur[0]+ur[1]/5;}
+    else{baseTotal+=resourcesPerMinute(br,currentResource,bp);upgTotal+=resourcesPerMinute(ur,currentResource,up);}
   }
   return Math.max(0,(upgTotal-baseTotal)/GAIN_SIM_RUNS);
 }
@@ -444,7 +444,7 @@ function computeUpgradeGain(ti,uj,p,e,base){
   const det=avgEvent_short(pu,eu);
   if(optimizeMode==='wave'){
     const wGain=(det[0]+det[1]/5)-base.wave;
-    return Math.max(0,wGain);
+    return wGain>0?wGain:mcGainForUpgrade(ti,uj);
   }
   const rpmGain=det[0]>0?resourcesPerMinute(det,currentResource,p)-base.rpm:0;
   return rpmGain>0?rpmGain:mcGainForUpgrade(ti,uj);
@@ -458,7 +458,7 @@ function computeGainFromLevels(ti,uj,levels,bp,be,base){
   const det=avgEvent_short(p,e);
   if(optimizeMode==='wave'){
     const wGain=(det[0]+det[1]/5)-base.wave;
-    return Math.max(0,wGain);
+    return wGain>0?wGain:(approxCache[`${ti}_${uj}`]||0);
   }
   const rpmGain=det[0]>0?resourcesPerMinute(det,currentResource,bp)-base.rpm:0;
   return rpmGain>0?rpmGain:(approxCache[`${ti}_${uj}`]||0);
