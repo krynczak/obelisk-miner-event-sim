@@ -1,5 +1,8 @@
 # Changelog
 
+## v1.8.0
+- Fix max wave mode root cause: simulate with player.atk held at base level so attack damage upgrades produce exactly 0 wave gain when already one-shotting before death wave. Only HP, block, speed, and game speed upgrades can move the final wave.
+
 ## v1.7.0
 - Fix max wave mode: use fractional wave (wave + sub/5) for precision; remove MC noise fallback so attack damage correctly shows 0 gain when player already one-shots
 - Budget planner now respects the res/min / max wave mode

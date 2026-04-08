@@ -177,7 +177,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 <body>
 
 <header class="header">
-  <div class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v1.7.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()" style="margin-left:2px">?</button></div>
+  <div class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v1.8.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()" style="margin-left:2px">?</button></div>
   <button class="btn-run" style="width:auto;padding:5px 14px;margin:0;font-size:9px" onclick="approxCache={};runAndRender()">Run Sim ▶</button>
   <button class="res-btn" onclick="cycleResource()">Cycle Resource <span id="res-num">1</span> ▸</button>
   <button class="res-btn" id="btn-export" onclick="exportState()">Export ▾</button>
@@ -687,12 +687,18 @@ function refreshUpgradeValues(){
       if(!locked&&cachedP&&lvl<maxL&&(!isCap||capUseful)){
         const key=`${ti}_${uj}`;
         if(!approxCache[key]){
-          const det=GiveApproxWithUpgraded(ti,uj);
           if(optimizeMode==='wave'){
-            // Use fractional wave (wave + sub/5) for precision; no MC fallback to avoid noise masking 0-gain upgrades
-            const wGain=(det[0]+det[1]/5)-(approxCache['baseWave']||0);
+            // Simulate with player.atk held constant: attack damage upgrades produce 0 wave gain
+            // because faster killing doesn't improve survival when already 1-shotting before death wave.
+            // Only stat changes that affect HP, block, speed, or game speed move the final wave.
+            upgrades[ti][uj]=(upgrades[ti][uj]||0)+1;
+            const{p:pu,e:eu}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
+            upgrades[ti][uj]--;
+            const wDet=avgEvent_short({...pu,atk:cachedP.atk},eu);
+            const wGain=(wDet[0]+wDet[1]/5)-(approxCache['baseWave']||0);
             approxCache[key]=wGain>0.005?wGain:0;
           } else {
+            const det=GiveApproxWithUpgraded(ti,uj);
             const detGain=det[0]>0?resourcesPerMinute(det,currentResource,cachedP)-baseRPM:0;
             // If deterministic sees a gain, use it (stable). Otherwise try Monte Carlo.
             approxCache[key]=detGain>0?detGain:mcGainForUpgrade(ti,uj);
@@ -812,9 +818,10 @@ function budgetPlan(){
   const ordered=[];
   const summary={};
   const MAX_ITER=600;
+  const waveBaseAtk=(cachedP||playerStatsBase).atk; // fixed for wave mode comparisons
   for(let iter=0;iter<MAX_ITER;iter++){
     const{p:bp,e:be}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
-    const bApx=avgEvent_short(bp,be);
+    const bApx=avgEvent_short(optimizeMode==='wave'?{...bp,atk:waveBaseAtk}:bp,be);
     const bMetric=optimizeMode==='wave'?bApx[0]+bApx[1]/5:resourcesPerMinute(bApx,currentResource,bp);
     let bestGain=0,bestTi=-1,bestUj=-1,bestCost=0;
     for(let ti=0;ti<4;ti++){
@@ -830,7 +837,7 @@ function budgetPlan(){
         levels[ti][uj]++;
         const{p,e}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
         levels[ti][uj]--;
-        const uApx=avgEvent_short(p,e);
+        const uApx=avgEvent_short(optimizeMode==='wave'?{...p,atk:waveBaseAtk}:p,e);
         const uMetric=optimizeMode==='wave'?uApx[0]+uApx[1]/5:resourcesPerMinute(uApx,currentResource,p);
         const detGain=uMetric-bMetric;
         const gain=detGain>0?detGain:(approxCache[`${ti}_${uj}`]||0);
