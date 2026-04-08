@@ -1,4 +1,4 @@
-# Shminer Event Sim
+# Obelisk Miner Event Sim
 
 Web-based event simulator for [Idle Obelisk Miner](https://shminer.miraheze.org/wiki/Events) (Shminer).
 
