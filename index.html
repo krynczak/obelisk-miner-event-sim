@@ -177,7 +177,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 <body>
 
 <header class="header">
-  <div class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v1.9.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()" style="margin-left:2px">?</button></div>
+  <div class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v2.0.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()" style="margin-left:2px">?</button></div>
   <button class="btn-run" style="width:auto;padding:5px 14px;margin:0;font-size:9px" onclick="approxCache={};runAndRender()">Run Sim ▶</button>
   <button class="res-btn" onclick="cycleResource()">Cycle Resource <span id="res-num">1</span> ▸</button>
   <button class="res-btn" id="btn-export" onclick="exportState()">Export ▾</button>
@@ -323,6 +323,15 @@ const upgradeInstructions=[
 ];
 const playerStatsBase={defaultAtkTime:2,defaultWalkTime:4,walkSpeed:1,atkSpeed:1,health:100,atk:10,crit:0,critDmg:2,blockChance:0,gameSpeed:1,prestigeBonusScale:0.1,x2money:0,x5money:0};
 const enemyStatsBase={defaultAtkTime:2,atkSpeed:0.8,baseHealth:4,healthScaling:7,atk:2.5,atkScaling:0.6,crit:0,critDmg:1,critDmgScaling:0.05};
+// Pre-compute which upgrades only affect offense stats (atk/crit/critDmg) and no survival stats.
+// These give 0 gain when the player already 1-shots every wave they can reach, in any mode.
+const OFFENSE_STATS=new Set(['atk','crit','critDmg']);
+const offenseOnly=upgradeInstructions.map(tier=>tier.map(fn=>{
+  const tp=Object.assign({},playerStatsBase),te=Object.assign({},enemyStatsBase);
+  fn(1,tp,te);
+  if(Object.keys(enemyStatsBase).some(k=>te[k]!==enemyStatsBase[k]))return false;
+  return !Object.keys(playerStatsBase).some(k=>!OFFENSE_STATS.has(k)&&tp[k]!==playerStatsBase[k]);
+}));
 
 // Apply all upgrade levels + prestige + gems to base stats, return computed player & enemy
 function parseUpgrades(upgs,basePlayer,baseEnemy,prestiges,gems){
@@ -409,26 +418,50 @@ function avgEvent_short(player,enemy){
   return[finalWave,finalSub,totalTime];
 }
 const GAIN_SIM_RUNS=200;
-function GiveApproxWithUpgraded(ti,uj){
-  upgrades[ti][uj]=(upgrades[ti][uj]||0)+1;
-  const{p,e}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
-  upgrades[ti][uj]--;
-  return avgEvent_short(p,e);
-}
-// Monte Carlo comparison: returns gain in res/min, or 0 if no measurable difference
+// Monte Carlo fallback for rpm mode: returns res/min gain, or 0 if no measurable difference.
+// Only called when deterministic sim shows 0 and upgrade is not offense-only.
 function mcGainForUpgrade(ti,uj){
   const{p:bp,e:be}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
   upgrades[ti][uj]=(upgrades[ti][uj]||0)+1;
   const{p:up,e:ue}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
   upgrades[ti][uj]--;
-  // Run paired simulations to reduce variance
   let baseTotal=0,upgTotal=0;
   for(let i=0;i<GAIN_SIM_RUNS;i++){
     const br=eventTest(bp,be),ur=eventTest(up,ue);
-    if(optimizeMode==='wave'){baseTotal+=br[0];upgTotal+=ur[0];}
-    else{baseTotal+=resourcesPerMinute(br,currentResource,bp);upgTotal+=resourcesPerMinute(ur,currentResource,up);}
+    baseTotal+=resourcesPerMinute(br,currentResource,bp);
+    upgTotal+=resourcesPerMinute(ur,currentResource,up);
   }
   return Math.max(0,(upgTotal-baseTotal)/GAIN_SIM_RUNS);
+}
+// Compute gain for one upgrade (+1 level) against a base metric.
+// baseMetric = {rpm, wave} from the current base sim.
+// Handles offense-only filtering, mode branching, and MC fallback in one place.
+function computeUpgradeGain(ti,uj,p,e,base){
+  if(offenseOnly[ti][uj]&&get_highest_wave_killed_in_x_hits(p,e,1)>Math.floor(base.wave))return 0;
+  upgrades[ti][uj]=(upgrades[ti][uj]||0)+1;
+  const{p:pu,e:eu}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
+  upgrades[ti][uj]--;
+  const det=avgEvent_short(pu,eu);
+  if(optimizeMode==='wave'){
+    const wGain=(det[0]+det[1]/5)-base.wave;
+    return wGain>0.005?wGain:0;
+  }
+  const rpmGain=det[0]>0?resourcesPerMinute(det,currentResource,p)-base.rpm:0;
+  return rpmGain>0?rpmGain:mcGainForUpgrade(ti,uj);
+}
+// Budget planner variant: uses a local copy of levels instead of the global upgrades array.
+function computeGainFromLevels(ti,uj,levels,bp,be,base){
+  if(offenseOnly[ti][uj]&&get_highest_wave_killed_in_x_hits(bp,be,1)>Math.floor(base.wave))return 0;
+  levels[ti][uj]++;
+  const{p,e}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
+  levels[ti][uj]--;
+  const det=avgEvent_short(p,e);
+  if(optimizeMode==='wave'){
+    const wGain=(det[0]+det[1]/5)-base.wave;
+    return wGain>0.005?wGain:0;
+  }
+  const rpmGain=det[0]>0?resourcesPerMinute(det,currentResource,bp)-base.rpm:0;
+  return rpmGain>0?rpmGain:(approxCache[`${ti}_${uj}`]||0);
 }
 
 // ── UI DATA ──────────────────────────────────────────────────
@@ -664,14 +697,11 @@ function buildUpgradesDOM(){
 }
 
 function refreshUpgradeValues(){
-  if(!approxCache['baseRPM']){
+  if(!approxCache['base']){
     const baseSim=avgEvent_short(cachedP||playerStatsBase,cachedE||enemyStatsBase);
-    approxCache['baseRPM']=resourcesPerMinute(baseSim,currentResource,cachedP||playerStatsBase);
-    approxCache['baseWave']=baseSim[0]+baseSim[1]/5;
+    approxCache['base']={rpm:resourcesPerMinute(baseSim,currentResource,cachedP||playerStatsBase),wave:baseSim[0]+baseSim[1]/5};
   }
-  const baseRPM=approxCache['baseRPM'];
-  // When player can 1-shot every wave they'll ever reach, holding atk constant excludes attack-only upgrades in any mode
-  const alwaysOneShot=cachedP&&get_highest_wave_killed_in_x_hits(cachedP,cachedE,1)>Math.floor(approxCache['baseWave']||0);
+  const base=approxCache['base'];
 
   // First pass: collect all gains
   const allGains=[];
@@ -688,23 +718,7 @@ function refreshUpgradeValues(){
       if(isCap){for(let u=0;u<upgradeNames[ti].length;u++){if(u!==uj&&(upgrades[ti][u]||0)>=currentMaxLvl(ti,u)){capUseful=true;break}}}
       if(!locked&&cachedP&&lvl<maxL&&(!isCap||capUseful)){
         const key=`${ti}_${uj}`;
-        if(!approxCache[key]){
-          // When always one-shotting: hold atk constant so attack-only upgrades give 0 in any mode;
-          // combo upgrades (e.g. +atk +HP) are credited only for the survival portion.
-          upgrades[ti][uj]=(upgrades[ti][uj]||0)+1;
-          const{p:pu,e:eu}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
-          upgrades[ti][uj]--;
-          const simP=alwaysOneShot?{...pu,atk:cachedP.atk}:pu;
-          const det=avgEvent_short(simP,eu);
-          if(optimizeMode==='wave'){
-            const wGain=(det[0]+det[1]/5)-(approxCache['baseWave']||0);
-            approxCache[key]=wGain>0.005?wGain:0;
-          } else {
-            const detGain=det[0]>0?resourcesPerMinute(det,currentResource,cachedP)-baseRPM:0;
-            // No MC fallback when always one-shotting (attack portion already excluded from det)
-            approxCache[key]=detGain>0?detGain:alwaysOneShot?0:mcGainForUpgrade(ti,uj);
-          }
-        }
+        if(!approxCache[key])approxCache[key]=computeUpgradeGain(ti,uj,cachedP,cachedE,base);
         gain=approxCache[key];
       }
       const upgCost=locked||lvl>=maxL?0:costs[ti][uj]*Math.pow(1.25,lvl);
@@ -822,8 +836,7 @@ function budgetPlan(){
   for(let iter=0;iter<MAX_ITER;iter++){
     const{p:bp,e:be}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
     const bApx=avgEvent_short(bp,be);
-    const bMetric=optimizeMode==='wave'?bApx[0]+bApx[1]/5:resourcesPerMinute(bApx,currentResource,bp);
-    const alwaysOneShotB=get_highest_wave_killed_in_x_hits(bp,be,1)>Math.floor(bApx[0]);
+    const base={rpm:resourcesPerMinute(bApx,currentResource,bp),wave:bApx[0]+bApx[1]/5};
     let bestGain=0,bestTi=-1,bestUj=-1,bestCost=0;
     for(let ti=0;ti<4;ti++){
       if(res[ti]<=0)continue;
@@ -835,14 +848,7 @@ function budgetPlan(){
         if(lvl>=maxL)continue;
         const cost=costs[ti][uj]*Math.pow(1.25,lvl);
         if(cost>res[ti])continue;
-        levels[ti][uj]++;
-        const{p,e}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
-        levels[ti][uj]--;
-        const simP=alwaysOneShotB?{...p,atk:bp.atk}:p;
-        const uApx=avgEvent_short(simP,e);
-        const uMetric=optimizeMode==='wave'?uApx[0]+uApx[1]/5:resourcesPerMinute(uApx,currentResource,p);
-        const detGain=uMetric-bMetric;
-        const gain=detGain>0?detGain:(alwaysOneShotB?0:(approxCache[`${ti}_${uj}`]||0));
+        const gain=computeGainFromLevels(ti,uj,levels,bp,be,base);
         if(gain>bestGain){bestGain=gain;bestTi=ti;bestUj=uj;bestCost=cost}
       }
     }
