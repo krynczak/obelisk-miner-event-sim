@@ -177,7 +177,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 <body>
 
 <header class="header">
-  <div class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v2.0.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()" style="margin-left:2px">?</button></div>
+  <div class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v2.0.1</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()" style="margin-left:2px">?</button></div>
   <button class="btn-run" style="width:auto;padding:5px 14px;margin:0;font-size:9px" onclick="approxCache={};runAndRender()">Run Sim ▶</button>
   <button class="res-btn" onclick="cycleResource()">Cycle Resource <span id="res-num">1</span> ▸</button>
   <button class="res-btn" id="btn-export" onclick="exportState()">Export ▾</button>
@@ -444,7 +444,7 @@ function computeUpgradeGain(ti,uj,p,e,base){
   const det=avgEvent_short(pu,eu);
   if(optimizeMode==='wave'){
     const wGain=(det[0]+det[1]/5)-base.wave;
-    return wGain>0.005?wGain:0;
+    return Math.max(0,wGain);
   }
   const rpmGain=det[0]>0?resourcesPerMinute(det,currentResource,p)-base.rpm:0;
   return rpmGain>0?rpmGain:mcGainForUpgrade(ti,uj);
@@ -458,7 +458,7 @@ function computeGainFromLevels(ti,uj,levels,bp,be,base){
   const det=avgEvent_short(p,e);
   if(optimizeMode==='wave'){
     const wGain=(det[0]+det[1]/5)-base.wave;
-    return wGain>0.005?wGain:0;
+    return Math.max(0,wGain);
   }
   const rpmGain=det[0]>0?resourcesPerMinute(det,currentResource,bp)-base.rpm:0;
   return rpmGain>0?rpmGain:(approxCache[`${ti}_${uj}`]||0);
@@ -742,7 +742,7 @@ function refreshUpgradeValues(){
     const lockMsg=presReq>prestigeCount?`Unlocks at Prestige ${presReq}`:'Level Up Previous To Unlock';
     document.getElementById(`upg-name-${ti}-${uj}`).textContent=locked?lockMsg:upgradeNames[ti][uj];
     document.getElementById(`upg-cost-${ti}-${uj}`).textContent=locked?'':formatNumber(costs[ti][uj]*Math.pow(1.25,lvl));
-    const gainStr=locked||lvl>=maxL?'':gain>0?gain.toFixed(1):'< 0.1';
+    const gainStr=locked||lvl>=maxL||gain===0?'':gain>0.05?gain.toFixed(1):'< 0.1';
     document.getElementById(`upg-gain-${ti}-${uj}`).textContent=gainStr;
     const pct=gain>0?Math.max(4,Math.round(gain/maxGain*100)):0;
     document.getElementById(`upg-fill-${ti}-${uj}`).style.width=pct+'%';
@@ -752,7 +752,7 @@ function refreshUpgradeValues(){
   const available=allGains.filter(g=>!g.locked&&g.lvl<g.maxL);
   const picks=[];
   for(let ti=0;ti<4;ti++){
-    const tierUpgrades=available.filter(g=>g.ti===ti).sort((a,b)=>b.efficiency-a.efficiency||b.gain-a.gain);
+    const tierUpgrades=available.filter(g=>g.ti===ti&&g.gain>0).sort((a,b)=>b.efficiency-a.efficiency||b.gain-a.gain);
     if(tierUpgrades.length>0)picks.push(tierUpgrades[0]);
   }
   picks.sort((a,b)=>a.ti-b.ti);
@@ -762,7 +762,7 @@ function refreshUpgradeValues(){
     const name=upgradeNames[g.ti][g.uj];
     const cost=formatNumber(costs[g.ti][g.uj]*Math.pow(1.25,g.lvl));
     const isBest=i===0&&g.gain>0;
-    const gainText=g.gain>0?`+${g.gain.toFixed(1)}`:'< 0.1';
+    const gainText=g.gain>0.05?`+${g.gain.toFixed(1)}`:'< 0.1';
     return `<div class="pick${isBest?' best':''}" onclick="changeUpgrade(${g.ti},${g.uj},1)">
       <div class="pick-rank">T${g.ti+1}</div>
       <div class="pick-body">
