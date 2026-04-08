@@ -42,6 +42,9 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 /* ── Help tooltips ──────────────────────── */
 .help-btn{background:var(--s3);border:1px solid var(--b1);color:var(--t3);font-family:'Chakra Petch',sans-serif;font-size:8px;font-weight:700;width:14px;height:14px;line-height:12px;text-align:center;cursor:pointer;padding:0;flex-shrink:0;border-radius:2px;transition:all .15s;margin-left:auto}
 .help-btn:hover{color:var(--acc);border-color:var(--acc-dim)}
+.opt-btn{background:var(--s3);border:1px solid var(--b1);color:var(--t3);font-family:'Chakra Petch',sans-serif;font-size:8px;font-weight:700;padding:1px 5px;cursor:pointer;border-radius:2px;transition:all .15s;margin-left:6px;vertical-align:middle;letter-spacing:.06em;text-transform:uppercase}
+.opt-btn:hover{color:var(--acc);border-color:var(--acc-dim)}
+.opt-btn.active{background:var(--acc-dim);border-color:var(--acc);color:var(--acc)}
 .help-wrap{position:relative;display:inline}
 .help-popup{display:none;position:absolute;top:22px;left:0;background:var(--s1);border:1px solid var(--b2);padding:10px 12px;font-family:'Space Mono',monospace;font-size:10px;font-weight:400;color:var(--t2);line-height:1.5;letter-spacing:0;text-transform:none;max-width:300px;min-width:200px;z-index:20;white-space:normal}
 .help-popup.open{display:block}
@@ -172,7 +175,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 <body>
 
 <header class="header">
-  <div class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v1.5.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()" style="margin-left:2px">?</button></div>
+  <div class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v1.6.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()" style="margin-left:2px">?</button></div>
   <button class="btn-run" style="width:auto;padding:5px 14px;margin:0;font-size:9px" onclick="approxCache={};runAndRender()">Run Sim ▶</button>
   <button class="res-btn" onclick="cycleResource()">Cycle Resource <span id="res-num">1</span> ▸</button>
   <button class="res-btn" id="btn-export" onclick="exportState()">Export ▾</button>
@@ -218,7 +221,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
       <div class="sim-loading">Simulating…</div>
     </div>
     <div class="panel">
-      <div class="ptitle">Next Buy — best per tier <span class="help-wrap"><button class="help-btn" aria-label="Help" onclick="toggleHelp(this)">?</button><div class="help-popup">Best upgrade per tier ranked by gain/cost efficiency for the selected resource type. Click to buy +1 level (Shift+click for +10).</div></span></div>
+      <div class="ptitle">Next Buy — best per tier <button id="opt-toggle" class="opt-btn" onclick="toggleOptimizeMode()">res/min</button><span class="help-wrap"><button class="help-btn" aria-label="Help" onclick="toggleHelp(this)">?</button><div class="help-popup">Best upgrade per tier ranked by gain/cost efficiency. Toggle res/min (farming) vs max wave (wave pushing) to change the optimization goal. Click to buy +1 level (Shift+click for +10).</div></span></div>
       <div id="top-picks"><div class="picks-empty">Calculating…</div></div>
     </div>
     <div class="panel">
@@ -420,8 +423,8 @@ function mcGainForUpgrade(ti,uj){
   let baseTotal=0,upgTotal=0;
   for(let i=0;i<GAIN_SIM_RUNS;i++){
     const br=eventTest(bp,be),ur=eventTest(up,ue);
-    baseTotal+=resourcesPerMinute(br,currentResource,bp);
-    upgTotal+=resourcesPerMinute(ur,currentResource,up);
+    if(optimizeMode==='wave'){baseTotal+=br[0];upgTotal+=ur[0];}
+    else{baseTotal+=resourcesPerMinute(br,currentResource,bp);upgTotal+=resourcesPerMinute(ur,currentResource,up);}
   }
   return Math.max(0,(upgTotal-baseTotal)/GAIN_SIM_RUNS);
 }
@@ -465,13 +468,14 @@ function resourcesPerMinute(simResult,resource,p){
 
 // ── PERSISTENCE ──────────────────────────────────────────────
 const LS_KEY='shminer_state';
-function saveState(){try{localStorage.setItem(LS_KEY,JSON.stringify({upgrades,gemUp,prestigeCount,baseCost,currentResource}))}catch(_){}}
+function saveState(){try{localStorage.setItem(LS_KEY,JSON.stringify({upgrades,gemUp,prestigeCount,baseCost,currentResource,optimizeMode}))}catch(_){}}
 function applyStateFields(s){
   if(s.upgrades)upgrades=s.upgrades;
   if(s.gemUp)gemUp=s.gemUp;
   if(s.prestigeCount!=null)prestigeCount=s.prestigeCount;
   if(s.baseCost)baseCost=s.baseCost;
   if(s.currentResource)currentResource=s.currentResource;
+  if(s.optimizeMode)optimizeMode=s.optimizeMode;
 }
 function loadState(){
   try{
@@ -518,6 +522,7 @@ function stopHold(){
 
 // ── UI STATE ─────────────────────────────────────────────────
 let currentResource=1,baseCost=[0,0,0,0],approxCache={},cachedP=null,cachedE=null,shiftHeld=false;
+let optimizeMode='rpm'; // 'rpm' | 'wave'
 document.addEventListener('keydown',e=>{if(e.key==='Shift')shiftHeld=true});
 document.addEventListener('keyup',  e=>{if(e.key==='Shift')shiftHeld=false});
 
@@ -533,6 +538,13 @@ function prestigeReset(){
   approxCache={};runAndRender();
 }
 function cycleResource(){currentResource=(currentResource%4)+1;document.getElementById('res-num').textContent=currentResource;saveState();refreshUpgradeValues()}
+function toggleOptimizeMode(){
+  optimizeMode=optimizeMode==='rpm'?'wave':'rpm';
+  const btn=document.getElementById('opt-toggle');
+  btn.textContent=optimizeMode==='rpm'?'res/min':'max wave';
+  btn.classList.toggle('active',optimizeMode==='wave');
+  approxCache={};saveState();refreshUpgradeValues();
+}
 function setUpgrade(ti,uj,val){upgrades[ti][uj]=Math.max(0,Math.min(currentMaxLvl(ti,uj),parseInt(val)||0));approxCache={};runAndRender()}
 function changeUpgrade(ti,uj,delta){
   const step=shiftHeld?10*delta:delta;
@@ -654,6 +666,7 @@ function refreshUpgradeValues(){
   if(!approxCache['baseRPM']){
     const baseSim=avgEvent_short(cachedP||playerStatsBase,cachedE||enemyStatsBase);
     approxCache['baseRPM']=resourcesPerMinute(baseSim,currentResource,cachedP||playerStatsBase);
+    approxCache['baseWave']=baseSim[0];
   }
   const baseRPM=approxCache['baseRPM'];
 
@@ -674,9 +687,14 @@ function refreshUpgradeValues(){
         const key=`${ti}_${uj}`;
         if(!approxCache[key]){
           const det=GiveApproxWithUpgraded(ti,uj);
-          const detGain=det[0]>0?resourcesPerMinute(det,currentResource,cachedP)-baseRPM:0;
-          // If deterministic sees a gain, use it (stable). Otherwise try Monte Carlo.
-          approxCache[key]=detGain>0?detGain:mcGainForUpgrade(ti,uj);
+          if(optimizeMode==='wave'){
+            const wGain=det[0]-(approxCache['baseWave']||0);
+            approxCache[key]=wGain>0?wGain:mcGainForUpgrade(ti,uj);
+          } else {
+            const detGain=det[0]>0?resourcesPerMinute(det,currentResource,cachedP)-baseRPM:0;
+            // If deterministic sees a gain, use it (stable). Otherwise try Monte Carlo.
+            approxCache[key]=detGain>0?detGain:mcGainForUpgrade(ti,uj);
+          }
         }
         gain=approxCache[key];
       }
@@ -730,7 +748,7 @@ function refreshUpgradeValues(){
       </div>
       <div class="pick-right">
         <div class="pick-gain">${gainText}</div>
-        <div class="pick-cost">res${currentResource}/min</div>
+        <div class="pick-cost">${optimizeMode==='wave'?'avg wave':`res${currentResource}/min`}</div>
       </div>
     </div>`;
   }).join('');
@@ -795,7 +813,7 @@ function budgetPlan(){
   for(let iter=0;iter<MAX_ITER;iter++){
     const{p:bp,e:be}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
     const bApx=avgEvent_short(bp,be);
-    const bRPM=resourcesPerMinute(bApx,currentResource,bp);
+    const bMetric=optimizeMode==='wave'?bApx[0]:resourcesPerMinute(bApx,currentResource,bp);
     let bestGain=0,bestTi=-1,bestUj=-1,bestCost=0;
     for(let ti=0;ti<4;ti++){
       if(res[ti]<=0)continue;
@@ -810,8 +828,9 @@ function budgetPlan(){
         levels[ti][uj]++;
         const{p,e}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
         levels[ti][uj]--;
-        const rpm=resourcesPerMinute(avgEvent_short(p,e),currentResource,p);
-        const detGain=rpm-bRPM;
+        const uApx=avgEvent_short(p,e);
+        const uMetric=optimizeMode==='wave'?uApx[0]:resourcesPerMinute(uApx,currentResource,p);
+        const detGain=uMetric-bMetric;
         const gain=detGain>0?detGain:(approxCache[`${ti}_${uj}`]||0);
         if(gain>bestGain){bestGain=gain;bestTi=ti;bestUj=uj;bestCost=cost}
       }
@@ -901,6 +920,8 @@ function dismissOnboard(){document.getElementById('onboard-banner').style.displa
 loadState();
 buildUpgradesDOM();
 buildGemsDOM();
+// Sync opt-toggle button state after loadState
+(function(){const btn=document.getElementById('opt-toggle');if(btn){btn.textContent=optimizeMode==='rpm'?'res/min':'max wave';btn.classList.toggle('active',optimizeMode==='wave');}})();
 runAndRender();
 showOnboard();
 </script>
