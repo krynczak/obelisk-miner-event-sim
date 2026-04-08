@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.6.0
+- Optimize mode toggle (res/min vs max wave) in Next Buy and Budget Planner
+- res/min mode (default): ranks upgrades by farming efficiency, same as before
+- max wave mode: ranks by average wave gain - attack damage deprioritized when player already one-shots, HP/block/speed rise to top
+- Toggle state persists across page reloads
+
 ## v1.5.0
 - Upgrade names always fully visible (multi-line wrap instead of truncation)
 - Click feedback: flash animation on Next Buy and Budget Planner rows
