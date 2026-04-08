@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.1.0
+- Enable MC fallback in max wave mode: HP, block, speed, and other survival upgrades now show wave gain even when the deterministic sim can't detect it (marginal gains captured via 200 paired MC runs)
+- MC uses fractional wave (wave + sub/5) for precision in wave mode
+- Budget planner also benefits from MC-cached gains in wave mode
+
 ## v2.0.1
 - Fix: wave mode gain threshold removed - small HP/survival gains no longer clipped to 0
 - Fix: gain=0 upgrades show blank instead of misleading "< 0.1"
