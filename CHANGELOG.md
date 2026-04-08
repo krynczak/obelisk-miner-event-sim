@@ -1,5 +1,10 @@
 # Changelog
 
+## v2.0.1
+- Fix: wave mode gain threshold removed - small HP/survival gains no longer clipped to 0
+- Fix: gain=0 upgrades show blank instead of misleading "< 0.1"
+- Fix: Next Buy only shows upgrades with positive gain (no more attack damage at +0 avg wave)
+
 ## v2.0.0
 - Rewrite gain calculation: pre-compute offense-only upgrades (atk/crit/critDmg) at init
 - Attack and crit upgrades correctly show 0 gain when player always 1-shots, in any mode
