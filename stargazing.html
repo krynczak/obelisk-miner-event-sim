@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stargazing Floor Picker</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #111009;
+  --s1:      #1a1714;
+  --s2:      #221e19;
+  --s3:      #2d2820;
+  --b1:      #3a3028;
+  --b2:      #5a4838;
+  --acc:     #e8960a;
+  --acc-dim: #9a6308;
+  --acc-glow:rgba(232,150,10,.12);
+  --t1:      #f0e6d8;
+  --t2:      #a09080;
+  --t3:      #5a5040;
+  --gain:    #6cba6a;
+  --red:     #e05050;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-snap: cubic-bezier(0.2, 0, 0, 1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;font-size:14px;-webkit-font-smoothing:antialiased;display:flex;flex-direction:column;min-height:100vh;overflow-x:hidden}
+
+/* ── Focus visible ─────────────────────── */
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+:focus:not(:focus-visible){outline:none}
+
+/* ── Header ────────────────────────────── */
+header{display:flex;align-items:center;gap:20px;padding:14px 20px;background:var(--s1);border-bottom:1px solid var(--b1);position:sticky;top:0;z-index:10;box-shadow:0 2px 12px rgba(0,0,0,.4)}
+.brand{font-family:'Chakra Petch',sans-serif;font-size:18px;font-weight:700;color:var(--acc);letter-spacing:.06em;text-wrap:balance}
+.version{font-size:10px;font-weight:400;color:var(--t3);letter-spacing:.08em}
+.help-btn{background:var(--s3);border:1px solid var(--b1);color:var(--t3);font-family:'Chakra Petch',sans-serif;font-size:9px;font-weight:700;width:16px;height:16px;line-height:14px;text-align:center;cursor:pointer;padding:0;flex-shrink:0;transition:color .12s var(--ease-snap),border-color .12s var(--ease-snap);position:relative}
+.help-btn::after{content:'';position:absolute;inset:-8px}
+.help-btn:hover{color:var(--acc);border-color:var(--acc-dim)}
+
+/* ── Changelog modal ───────────────────── */
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,.7);z-index:100;justify-content:center;align-items:flex-start;padding:40px 20px;overflow-y:auto}
+.modal-overlay.open{display:flex}
+.modal-content{background:var(--s1);border:1px solid var(--b2);max-width:600px;width:100%;max-height:calc(100vh - 80px);overflow-y:auto;padding:20px 24px;position:relative;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.modal-content h2{font-family:'Chakra Petch',sans-serif;font-size:14px;font-weight:700;color:var(--acc);margin:0 0 12px;letter-spacing:.06em}
+.modal-content h3{font-family:'Chakra Petch',sans-serif;font-size:11px;font-weight:600;color:var(--t1);margin:14px 0 6px;letter-spacing:.04em}
+.modal-content li{font-size:10px;color:var(--t2);line-height:1.6;margin-bottom:2px}
+.modal-close{position:absolute;top:8px;right:12px;background:none;border:none;color:var(--t3);font-size:18px;cursor:pointer;padding:4px;position:relative}
+.modal-close::after{content:'';position:absolute;inset:-8px}
+.modal-close:hover{color:var(--t1)}
+
+/* ── Layout ────────────────────────────── */
+main{max-width:1100px;margin:0 auto;padding:20px;width:100%}
+.panel{background:var(--s2);border:1px solid var(--b1);padding:18px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.2),0 4px 12px rgba(0,0,0,.15)}
+.ptitle{font-family:'Chakra Petch',sans-serif;font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin-bottom:12px;padding-bottom:7px;border-bottom:1px solid var(--b1);text-wrap:balance}
+
+/* ── Star grid ─────────────────────────── */
+.tier-label{font-family:'Chakra Petch',sans-serif;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);margin:14px 0 6px;padding-bottom:4px;border-bottom:1px solid var(--b1)}
+.tier-label:first-child{margin-top:0}
+.star-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px}
+.star-item{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:default;border:1px solid transparent;transition:border-color .15s var(--ease-snap),background-color .15s var(--ease-snap)}
+.star-item:hover{border-color:var(--b2);background:rgba(255,255,255,.015)}
+.star-item.unlocked{border-color:var(--acc-dim)}
+.star-item.target{background:var(--acc-glow);border-color:var(--acc);box-shadow:inset 0 0 0 1px rgba(232,150,10,.06)}
+.star-item.maxed label{color:var(--t3);text-decoration:line-through}
+.star-item input[type=checkbox]{accent-color:var(--acc);cursor:pointer;width:16px;height:16px;flex-shrink:0}
+.star-item label{cursor:pointer;font-size:13px;color:var(--t2);user-select:none;flex:1;min-width:0;line-height:1.3}
+.star-item.unlocked label{color:var(--t1)}
+
+/* ── Level controls ────────────────────── */
+.star-level{display:flex;align-items:center;gap:2px;margin-left:auto;flex-shrink:0}
+.star-level .lvl-btn{background:var(--s3);border:1px solid var(--b1);color:var(--t3);font-family:'Chakra Petch',sans-serif;font-size:14px;font-weight:700;width:28px;height:28px;line-height:26px;text-align:center;cursor:pointer;padding:0;transition:color .12s var(--ease-snap),border-color .12s var(--ease-snap),transform .1s var(--ease-snap);position:relative;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.star-level .lvl-btn::after{content:'';position:absolute;inset:-8px}
+.star-level .lvl-btn:hover{color:var(--acc);border-color:var(--acc-dim)}
+.star-level .lvl-btn:active{transform:scale(0.92)}
+.star-level input[type=number]{background:var(--s3);border:1px solid var(--b1);color:var(--t1);font-family:'Space Mono',monospace;font-size:16px;width:3.5ch;text-align:center;padding:2px 0;height:28px;-moz-appearance:textfield;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.star-level input[type=number]::-webkit-inner-spin-button,
+.star-level input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+.star-level input[type=number]:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 1px var(--acc-dim)}
+.star-level .lvl-max{font-family:'Chakra Petch',sans-serif;font-size:10px;color:var(--t3);margin-left:3px;font-variant-numeric:tabular-nums}
+
+/* ── Target selector ───────────────────── */
+.target-section{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.target-section select{background:var(--s3);border:1px solid var(--b2);color:var(--t1);font-family:'Space Mono',monospace;font-size:16px;padding:8px 12px;cursor:pointer;transition:border-color .15s var(--ease-snap);-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.target-section select:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 1px var(--acc-dim)}
+.target-perk{font-size:12px;color:var(--t2);line-height:1.4}
+
+/* ── Results: floor cards ──────────────── */
+.results-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:10px}
+.floor-card{background:var(--s3);border:1px solid var(--b1);padding:16px 12px;text-align:center;transition:border-color .2s var(--ease-snap),background-color .2s var(--ease-snap),box-shadow .2s var(--ease-snap);animation:cardIn .3s var(--ease-out) both}
+.floor-card:nth-child(1){animation-delay:0s}
+.floor-card:nth-child(2){animation-delay:.04s}
+.floor-card:nth-child(3){animation-delay:.08s}
+.floor-card:nth-child(4){animation-delay:.12s}
+.floor-card:nth-child(5){animation-delay:.16s}
+@keyframes cardIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.floor-card.best{border-color:var(--acc);background:var(--acc-glow);box-shadow:0 0 20px rgba(232,150,10,.08),inset 0 0 0 1px rgba(232,150,10,.06)}
+.floor-card .set-label{font-family:'Chakra Petch',sans-serif;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--t3);margin-bottom:6px}
+.floor-card .floor-num{font-family:'Chakra Petch',sans-serif;font-size:36px;font-weight:700;color:var(--t1);line-height:1;font-variant-numeric:tabular-nums}
+.floor-card.best .floor-num{color:var(--acc)}
+.floor-card .floor-vein{font-size:10px;color:var(--t3);margin-top:3px}
+.floor-card .floor-debuff{font-size:9px;color:var(--red);margin-top:3px;font-weight:600}
+.floor-card .star-count{font-family:'Chakra Petch',sans-serif;font-size:18px;font-weight:700;color:var(--gain);margin-top:10px;font-variant-numeric:tabular-nums}
+.floor-card .star-count.zero{color:var(--t3)}
+.floor-card .star-list{font-size:11px;color:var(--t2);margin-top:6px;line-height:1.8}
+
+/* ── Tooltips ──────────────────────────── */
+.star-tip{position:relative;cursor:default;border-bottom:1px dotted var(--t3);transition:color .12s var(--ease-snap)}
+.star-tip:hover{color:var(--t1)}
+.star-tip .tip-text{display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);background:var(--s1);border:1px solid var(--b2);padding:6px 10px;font-size:10px;color:var(--t2);white-space:nowrap;z-index:20;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.4);line-height:1.4}
+.star-tip:hover .tip-text{display:block}
+
+/* ── Top floors ranking ────────────────── */
+.top-floor-row{display:flex;align-items:center;gap:14px;padding:10px 12px;background:var(--s3);border:1px solid var(--b1);margin-bottom:4px;transition:border-color .15s var(--ease-snap);animation:rowIn .25s var(--ease-out) both}
+@keyframes rowIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+.top-floor-row:nth-child(1){animation-delay:0s}
+.top-floor-row:nth-child(2){animation-delay:.03s}
+.top-floor-row:nth-child(3){animation-delay:.06s}
+.top-floor-row:nth-child(4){animation-delay:.09s}
+.top-floor-row:nth-child(5){animation-delay:.12s}
+.top-floor-row:nth-child(6){animation-delay:.15s}
+.top-floor-row:nth-child(7){animation-delay:.18s}
+.top-floor-row:nth-child(8){animation-delay:.21s}
+.top-floor-row:nth-child(9){animation-delay:.24s}
+.top-floor-row:nth-child(10){animation-delay:.27s}
+.top-floor-row.rank-1{border-left:3px solid var(--acc);background:var(--acc-glow)}
+.top-floor-rank{font-family:'Chakra Petch',sans-serif;font-size:16px;font-weight:700;color:var(--t3);width:28px;flex-shrink:0;font-variant-numeric:tabular-nums}
+.top-floor-row.rank-1 .top-floor-rank{color:var(--acc)}
+.top-floor-num{font-family:'Chakra Petch',sans-serif;font-size:20px;font-weight:700;color:var(--t1);width:48px;font-variant-numeric:tabular-nums}
+.top-floor-row.rank-1 .top-floor-num{color:var(--acc)}
+.top-floor-vein{font-size:10px;color:var(--t3);width:110px}
+.top-floor-count{font-family:'Chakra Petch',sans-serif;font-size:14px;font-weight:700;color:var(--gain);width:64px;font-variant-numeric:tabular-nums}
+.top-floor-stars{font-size:11px;color:var(--t2);flex:1;line-height:1.6}
+
+.no-target{color:var(--t3);font-size:14px;padding:14px 0}
+
+/* ── Buttons ───────────────────────────── */
+.actions{display:flex;gap:10px;margin-top:12px}
+.btn{background:transparent;border:1px solid var(--b2);color:var(--t2);font-family:'Chakra Petch',sans-serif;font-size:11px;letter-spacing:.1em;padding:8px 18px;cursor:pointer;transition:border-color .12s var(--ease-snap),color .12s var(--ease-snap),transform .1s var(--ease-snap);text-transform:uppercase;text-decoration:none;display:inline-block;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.btn:hover{border-color:var(--acc);color:var(--acc)}
+.btn:active{transform:scale(0.96)}
+
+/* ── Mobile ────────────────────────────── */
+@media(max-width:700px){
+  .results-grid{grid-template-columns:repeat(2,1fr)}
+  .star-grid{grid-template-columns:1fr}
+  .target-section{flex-direction:column;align-items:stretch}
+  .target-section select{width:100%}
+  .target-perk{font-size:11px}
+  header{flex-wrap:wrap;gap:10px;padding:12px 16px}
+  .brand{font-size:15px}
+  main{padding:14px}
+  .panel{padding:14px}
+  .top-floor-row{flex-wrap:wrap;gap:8px}
+  .top-floor-vein{width:auto}
+  .top-floor-stars{flex-basis:100%}
+  .floor-card .floor-num{font-size:28px}
+}
+
+/* ── Reduced motion ────────────────────── */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:0.01ms!important;animation-delay:0s!important;transition-duration:0.01ms!important}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">STARGAZING FLOOR PICKER <span class="version">v1.0.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()">?</button></div>
+  <a href="index.html" class="btn">Event Sim</a>
+</header>
+
+<main>
+  <section class="panel" aria-label="Unlocked Stars">
+    <div class="ptitle">Unlocked Stars</div>
+    <div id="starContainer"></div>
+    <div class="actions">
+      <button class="btn" onclick="selectAll(true)">Unlock All</button>
+      <button class="btn" onclick="selectAll(false)">Lock All</button>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="Target Star">
+    <div class="ptitle">Target Star</div>
+    <div class="target-section">
+      <select id="targetSelect" aria-label="Select a star to farm">
+        <option value="">-- Select a star to farm --</option>
+      </select>
+      <span class="target-perk" id="targetPerk"></span>
+    </div>
+  </section>
+
+  <section class="panel" aria-label="Best Floor">
+    <div class="ptitle">Best Floor</div>
+    <div id="results" aria-live="polite"><div class="no-target">Select a target star or see top floors below.</div></div>
+  </section>
+</main>
+
+<div id="changelog-modal" class="modal-overlay" onclick="if(event.target===this)closeChangelog()">
+  <div class="modal-content" role="dialog" aria-label="Changelog">
+    <button class="modal-close" aria-label="Close changelog" onclick="closeChangelog()">&#10005;</button>
+    <h2>Changelog</h2>
+    <div id="changelog-body">
+      <h3>v1.0.0</h3>
+      <ul>
+        <li>Stargazing Floor Picker: select unlocked stars, pick a target, see the best floor to camp</li>
+        <li>Star level tracking with +/- controls; maxed stars excluded from recommendations</li>
+        <li>Top floors ranking when no target is selected</li>
+        <li>Vein types and floor debuffs displayed per floor card</li>
+        <li>Co-star perk tooltips on hover</li>
+        <li>Stars grouped by game phase (Early / Mid / End Game)</li>
+        <li>Target dropdown grouped by game phase with optgroup</li>
+        <li>State persistence (unlocked stars, levels, target) via localStorage</li>
+        <li>Mobile responsive layout</li>
+        <li>Accessibility: semantic landmarks, aria-labels, focus-visible, reduced motion</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+const STARS = [
+  { name: "Aries",       floors: [19,  8, 12, 26, 22], veins: ["Virtual","Stone","Magma","Space","Virtual"],       debuffs: [null,null,null,null,null], maxLevel: 20, perk: "Vein Spawn Rate +3%, Golden Vein Chance +1%" },
+  { name: "Taurus",      floors: [ 9,  6, 27, 36,  3], veins: ["Magma","Stone","Space","Cloud","Stone"],           debuffs: [null,null,null,null,null], maxLevel: 20, perk: "Pickaxe Damage +12%, Auto catch Stars +2%" },
+  { name: "Gemini",      floors: [29, 40, 18, 60,  9], veins: ["Space","Atomic","Magma","Valley","Magma"],         debuffs: [null,null,null,null,null], maxLevel: 20, perk: "Golden Floor Multi 1.02x, Star Spawn Rate +2%" },
+  { name: "Cancer",      floors: [39, 28,  4, 47, 41], veins: ["Atomic","Space","Stone","Deepsea","Atomic"],       debuffs: [null,null,null,null,null], maxLevel: 20, perk: "Double Contract Point Chance +1%, Contract Upgrade Cost -1%" },
+  { name: "Leo",         floors: [43, 58,  5, 13, 26], veins: ["Deepsea","Valley","Stone","Magma","Space"],        debuffs: [null,null,null,null,null], maxLevel:  3, perk: "Workshop Cap +1, Triple Super Star Chance +4%" },
+  { name: "Virgo",       floors: [17, 23, 58, 41, 12], veins: ["Magma","Virtual","Valley","Atomic","Magma"],       debuffs: [null,null,null,null,null], maxLevel: 25, perk: "Bomb Recharge Rate +1%, Super Star Spawn Rate +1%" },
+  { name: "Libra",       floors: [42, 13, 39,  4, 17], veins: ["Atomic","Magma","Atomic","Stone","Magma"],         debuffs: [null,null,null,null,null], maxLevel: 20, perk: "Prestige Points Gain +5%, Triple Lootbug Chance +1%" },
+  { name: "Scorpio",     floors: [27, 59, 44, 21, 36], veins: ["Space","Valley","Deepsea","Virtual","Cloud"],      debuffs: [null,null,null,null,null], maxLevel: 50, perk: "Pickaxe Damage +15%, All Star Multi +0.5%" },
+  { name: "Sagittarius", floors: [59, 17, 21,  7, 46], veins: ["Valley","Magma","Virtual","Stone","Deepsea"],      debuffs: [null,null,null,null,null], maxLevel: 15, perk: "Lootbug Spawn Rate +2%, Triple Star Chance +1%" },
+  { name: "Capricorn",   floors: [ 2, 30, 57, 54,  5], veins: ["Stone","Space","Valley","Beach","Stone"],          debuffs: [null,null,null,null,null], maxLevel: 20, perk: "Experience Gain +15%, Item Duration +1%" },
+  { name: "Aquarius",    floors: [12, 51, 34, 17, 29], veins: ["Magma","Beach","Cloud","Magma","Space"],           debuffs: [null,null,null,null,null], maxLevel: 10, perk: "Bar Craft Costs -1%, Golden Lootbug Chance +1%" },
+  { name: "Pisces",      floors: [60, 50, 46, 53, 55], veins: ["Valley","Beach","Deepsea","Beach","Valley"],       debuffs: [null,null,null,null,null], maxLevel:  2, perk: "Pet Level Cap +1, Rainbow Floor Multi +10x" },
+  { name: "Ophiuchus",   floors: [48, 45, 52, 56, 64], veins: ["Deepsea","Deepsea","Beach","Valley","Jungle"],     debuffs: [null,null,null,null,null], maxLevel:  2, perk: "Banked Freebie Cap +1, Banked Lootbug Cap +1" },
+  { name: "Orion",       floors: [65, 67, 69, 73, 75], veins: ["Jungle","Volcano","Volcano","Jurassic","Jurassic"],debuffs: [null,"Reduced Bomb Recharge",null,null,null], maxLevel: 20, perk: "100x Craft Chance +0.10%, Golden Ore Chance +0.25%" },
+  { name: "Hercules",    floors: [68, 73, 76, 78, 83], veins: ["Volcano","Jurassic","Jurassic","Jurassic","Roman"],debuffs: ["Reduced Bomb Recharge",null,null,null,null], maxLevel: 20, perk: "Star Supernova Chance +0.15%, Golden Ore Multi +8%" },
+  { name: "Draco",       floors: [86, 84, 82, 88, 90], veins: ["Industrial","Roman","Roman","Industrial","Industrial"], debuffs: ["Reduced Bomb Recharge",null,"Reduced Bomb Recharge",null,"Reduced Game Speed"], maxLevel: 20, perk: "Galactic Rainbow Chance +0.25%, Galactic Rainbow Multi +10%" },
+  { name: "Cetus",       floors: [95, 94, 91, 98, 99], veins: ["Warfront","Warfront","Warfront","Neon","Neon"],    debuffs: [null,null,"Reduced Game Speed","Reduced Game Speed",null], maxLevel: 20, perk: "Polychrome Ore Card Multi +0.15x, Fish Income Multi +2%" },
+  { name: "Phoenix",     floors: [92, 97,100, 93,102], veins: ["Warfront","Warfront","Neon","Warfront","Neon"],     debuffs: ["Reduced Game Speed","Reduced Game Speed",null,null,null], maxLevel: 18, perk: "Chain, Midas, Veinseeker, Starburst grade caps +1" },
+  { name: "Eridanus",    floors:[105,106,110,113,115], veins: ["Wonderland","Wonderland","Pirate","Pirate","Arabian"], debuffs: [null,null,"Reduced Freebie Rate","Reduced Lootbug Spawn","Increased Fuel Depletion"], maxLevel: 20, perk: "All Floor Multi +2%, Stonks Multi +2%, Super Stonks Chance +0.10%" },
+];
+
+const TIERS = [
+  { label: "Early Game (1-3)", from: 0, to: 3 },
+  { label: "Mid Game (4-12)", from: 3, to: 12 },
+  { label: "End Game (13-19)", from: 12, to: 19 },
+];
+
+const SK_UNLOCK = "sg-unlocked";
+const SK_LEVELS = "sg-levels";
+const SK_TARGET = "sg-target";
+
+function loadJSON(key, fallback) {
+  try { const v = localStorage.getItem(key); if (v) return JSON.parse(v); } catch {}
+  return fallback;
+}
+
+let unlocked = new Set(loadJSON(SK_UNLOCK, []));
+let levels = loadJSON(SK_LEVELS, {});
+
+function saveUnlocked() { localStorage.setItem(SK_UNLOCK, JSON.stringify([...unlocked])); }
+function saveLevels() { localStorage.setItem(SK_LEVELS, JSON.stringify(levels)); }
+function saveTarget(v) { localStorage.setItem(SK_TARGET, v); }
+
+function isMaxed(star) {
+  return (levels[star.name] || 0) >= star.maxLevel;
+}
+
+function buildUI() {
+  const container = document.getElementById("starContainer");
+  const select = document.getElementById("targetSelect");
+
+  TIERS.forEach(tier => {
+    const lbl = document.createElement("div");
+    lbl.className = "tier-label";
+    lbl.textContent = tier.label;
+    container.appendChild(lbl);
+
+    const grid = document.createElement("div");
+    grid.className = "star-grid";
+    grid.setAttribute("role", "group");
+    grid.setAttribute("aria-label", tier.label);
+    container.appendChild(grid);
+
+    const optgroup = document.createElement("optgroup");
+    optgroup.label = tier.label;
+    select.appendChild(optgroup);
+
+    for (let i = tier.from; i < tier.to; i++) {
+      const star = STARS[i];
+      const div = document.createElement("div");
+      div.className = "star-item" + (unlocked.has(star.name) ? " unlocked" : "") + (isMaxed(star) ? " maxed" : "");
+      div.dataset.star = star.name;
+
+      const lvl = levels[star.name] || 0;
+      div.innerHTML =
+        `<input type="checkbox" id="cb-${star.name}" tabindex="-1" ${unlocked.has(star.name) ? "checked" : ""}>` +
+        `<label for="cb-${star.name}">${star.name}</label>` +
+        `<div class="star-level">` +
+          `<button class="lvl-btn" tabindex="-1" data-dir="-1" aria-label="Decrease ${star.name} level">-</button>` +
+          `<input type="number" min="0" max="${star.maxLevel}" value="${lvl}" aria-label="${star.name} level" data-star="${star.name}">` +
+          `<button class="lvl-btn" tabindex="-1" data-dir="1" aria-label="Increase ${star.name} level">+</button>` +
+          `<span class="lvl-max">/${star.maxLevel}</span>` +
+        `</div>`;
+
+      // Checkbox: unlock/lock
+      div.querySelector("input[type=checkbox]").addEventListener("change", e => {
+        if (e.target.checked) unlocked.add(star.name);
+        else unlocked.delete(star.name);
+        div.classList.toggle("unlocked", e.target.checked);
+        saveUnlocked();
+        updateResults();
+        populateTargetOptions();
+      });
+
+      // Click label: select as target
+      div.querySelector("label").addEventListener("click", e => {
+        e.preventDefault();
+        const cb = div.querySelector("input[type=checkbox]");
+        if (!unlocked.has(star.name)) {
+          unlocked.add(star.name);
+          cb.checked = true;
+          div.classList.add("unlocked");
+          saveUnlocked();
+          populateTargetOptions();
+        }
+        document.getElementById("targetSelect").value = star.name;
+        saveTarget(star.name);
+        updateResults();
+        updateTargetHighlight();
+      });
+
+      // Level input
+      const lvlInput = div.querySelector("input[type=number]");
+      lvlInput.addEventListener("change", () => {
+        let v = parseInt(lvlInput.value) || 0;
+        v = Math.max(0, Math.min(star.maxLevel, v));
+        lvlInput.value = v;
+        levels[star.name] = v;
+        div.classList.toggle("maxed", v >= star.maxLevel);
+        saveLevels();
+        updateResults();
+      });
+
+      // +/- buttons
+      div.querySelectorAll(".lvl-btn").forEach(btn => {
+        btn.addEventListener("click", e => {
+          e.stopPropagation();
+          const dir = parseInt(btn.dataset.dir);
+          let v = (parseInt(lvlInput.value) || 0) + dir;
+          v = Math.max(0, Math.min(star.maxLevel, v));
+          lvlInput.value = v;
+          levels[star.name] = v;
+          div.classList.toggle("maxed", v >= star.maxLevel);
+          saveLevels();
+          updateResults();
+        });
+      });
+
+      grid.appendChild(div);
+
+      const opt = document.createElement("option");
+      opt.value = star.name;
+      opt.textContent = star.name;
+      optgroup.appendChild(opt);
+    }
+  });
+
+  const savedTarget = localStorage.getItem(SK_TARGET) || "";
+  if (savedTarget) select.value = savedTarget;
+
+  select.addEventListener("change", () => {
+    saveTarget(select.value);
+    updateResults();
+    updateTargetHighlight();
+  });
+
+  updateTargetHighlight();
+}
+
+function updateTargetHighlight() {
+  const target = document.getElementById("targetSelect").value;
+  document.querySelectorAll(".star-item").forEach(el => {
+    el.classList.toggle("target", el.dataset.star === target);
+  });
+}
+
+function populateTargetOptions() {
+  const select = document.getElementById("targetSelect");
+  const current = select.value;
+  // Clear optgroups and rebuild
+  while (select.children.length > 1) select.removeChild(select.lastChild);
+  TIERS.forEach(tier => {
+    const optgroup = document.createElement("optgroup");
+    optgroup.label = tier.label;
+    for (let i = tier.from; i < tier.to; i++) {
+      const star = STARS[i];
+      const opt = document.createElement("option");
+      opt.value = star.name;
+      let suffix = "";
+      if (!unlocked.has(star.name)) suffix = " (locked)";
+      else if (isMaxed(star)) suffix = " (MAX)";
+      opt.textContent = star.name + suffix;
+      optgroup.appendChild(opt);
+    }
+    select.appendChild(optgroup);
+  });
+  select.value = current;
+}
+
+function starTipHTML(name) {
+  const star = STARS.find(s => s.name === name);
+  const maxed = isMaxed(star);
+  const label = maxed ? `${name} (MAX)` : name;
+  return `<span class="star-tip">${label}<span class="tip-text">${star.perk}</span></span>`;
+}
+
+function updateResults() {
+  const container = document.getElementById("results");
+  const targetName = document.getElementById("targetSelect").value;
+  const perkEl = document.getElementById("targetPerk");
+
+  if (!targetName) {
+    perkEl.textContent = "";
+    renderTopFloors(container);
+    return;
+  }
+
+  const target = STARS.find(s => s.name === targetName);
+  perkEl.textContent = target.perk;
+
+  const setResults = target.floors.map((floor, setIdx) => {
+    const coStars = STARS.filter(s =>
+      s.name !== targetName &&
+      unlocked.has(s.name) &&
+      !isMaxed(s) &&
+      s.floors.includes(floor)
+    ).map(s => s.name);
+    const targetCounts = unlocked.has(targetName) && !isMaxed(target) ? 1 : 0;
+    return { setIdx, floor, vein: target.veins[setIdx], debuff: target.debuffs[setIdx], coStars, total: coStars.length + targetCounts };
+  });
+
+  const maxTotal = Math.max(...setResults.map(r => r.total));
+
+  let html = '<div class="results-grid">';
+  setResults.forEach(r => {
+    const isBest = r.total === maxTotal && r.total > 0;
+    const countClass = r.total === 0 ? "star-count zero" : "star-count";
+    const debuffHTML = r.debuff ? `<div class="floor-debuff">${r.debuff}</div>` : "";
+    const starListHTML = r.coStars.length ? r.coStars.map(n => starTipHTML(n)).join(", ") : "-";
+    html += `<div class="floor-card${isBest ? " best" : ""}">
+      <div class="set-label">Set ${r.setIdx + 1}</div>
+      <div class="floor-num">${r.floor}</div>
+      <div class="floor-vein">${r.vein} Vein</div>
+      ${debuffHTML}
+      <div class="${countClass}">${r.total} star${r.total !== 1 ? "s" : ""}</div>
+      <div class="star-list">${starListHTML}</div>
+    </div>`;
+  });
+  html += "</div>";
+  container.innerHTML = html;
+}
+
+function renderTopFloors(container) {
+  const floorMap = {};
+  STARS.forEach(star => {
+    if (!unlocked.has(star.name) || isMaxed(star)) return;
+    star.floors.forEach((floor, idx) => {
+      if (!floorMap[floor]) floorMap[floor] = { stars: new Set(), vein: star.veins[idx] };
+      floorMap[floor].stars.add(star.name);
+    });
+  });
+
+  const ranked = Object.entries(floorMap)
+    .map(([floor, data]) => ({ floor: parseInt(floor), count: data.stars.size, stars: [...data.stars], vein: data.vein }))
+    .filter(r => r.count > 1)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+
+  if (!ranked.length) {
+    container.innerHTML = '<div class="no-target">Unlock stars to see top floors.</div>';
+    return;
+  }
+
+  let html = ranked.map((r, i) => {
+    const cls = i === 0 ? "top-floor-row rank-1" : "top-floor-row";
+    const starsHTML = r.stars.map(n => starTipHTML(n)).join(", ");
+    return `<div class="${cls}">
+      <div class="top-floor-rank">#${i + 1}</div>
+      <div class="top-floor-num">${r.floor}</div>
+      <div class="top-floor-vein">${r.vein} Vein</div>
+      <div class="top-floor-count">${r.count} stars</div>
+      <div class="top-floor-stars">${starsHTML}</div>
+    </div>`;
+  }).join("");
+
+  container.innerHTML = html;
+}
+
+function selectAll(state) {
+  STARS.forEach(s => {
+    if (state) unlocked.add(s.name); else unlocked.delete(s.name);
+  });
+  document.querySelectorAll(".star-item input[type=checkbox]").forEach(cb => {
+    cb.checked = state;
+    cb.closest(".star-item").classList.toggle("unlocked", state);
+  });
+  saveUnlocked();
+  updateResults();
+  populateTargetOptions();
+}
+
+function openChangelog() {
+  document.getElementById("changelog-modal").classList.add("open");
+}
+function closeChangelog() {
+  document.getElementById("changelog-modal").classList.remove("open");
+}
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") closeChangelog();
+});
+
+buildUI();
+populateTargetOptions();
+updateResults();
+</script>
+</body>
+</html>
