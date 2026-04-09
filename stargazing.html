@@ -65,7 +65,9 @@ main{max-width:1100px;margin:0 auto;padding:20px;width:100%}
 .star-item.target{background:var(--acc-glow);border-color:var(--acc);box-shadow:inset 0 0 0 1px rgba(232,150,10,.06)}
 .star-item.maxed label{color:var(--t3);text-decoration:line-through}
 .star-item input[type=checkbox]{accent-color:var(--acc);cursor:pointer;width:16px;height:16px;flex-shrink:0}
-.star-item label{cursor:pointer;font-size:13px;color:var(--t2);user-select:none;flex:1;min-width:0;line-height:1.3}
+.star-item label{cursor:pointer;font-size:13px;color:var(--t2);user-select:none;flex:1;min-width:0;line-height:1.3;position:relative}
+.star-item label .tip-text{display:none;position:absolute;bottom:calc(100% + 8px);left:0;background:var(--s1);border:1px solid var(--b2);padding:6px 10px;font-size:10px;color:var(--t2);white-space:nowrap;z-index:20;pointer-events:none;box-shadow:0 4px 12px rgba(0,0,0,.4);line-height:1.4}
+.star-item label:hover .tip-text{display:block}
 .star-item.unlocked label{color:var(--t1)}
 
 /* ── Level controls ────────────────────── */
@@ -167,17 +169,18 @@ main{max-width:1100px;margin:0 auto;padding:20px;width:100%}
 <body>
 
 <header>
-  <div class="brand">STARGAZING FLOOR PICKER <span class="version">v1.0.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()">?</button></div>
+  <div class="brand">STARGAZING FLOOR PICKER <span class="version">v1.1.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()">?</button></div>
   <a href="index.html" class="btn">Event Sim</a>
 </header>
 
 <main>
   <section class="panel" aria-label="Unlocked Stars">
-    <div class="ptitle">Unlocked Stars</div>
+    <div class="ptitle">Unlocked Stars <span id="starProgress" style="float:right;font-size:10px;font-weight:400;letter-spacing:.06em;color:var(--t3);text-transform:none"></span></div>
     <div id="starContainer"></div>
     <div class="actions">
       <button class="btn" onclick="selectAll(true)">Unlock All</button>
       <button class="btn" onclick="selectAll(false)">Lock All</button>
+      <button class="btn" onclick="resetLevels()">Reset Levels</button>
     </div>
   </section>
 
@@ -202,6 +205,14 @@ main{max-width:1100px;margin:0 auto;padding:20px;width:100%}
     <button class="modal-close" aria-label="Close changelog" onclick="closeChangelog()">&#10005;</button>
     <h2>Changelog</h2>
     <div id="changelog-body">
+      <h3>v1.1.0</h3>
+      <ul>
+        <li>Hold-to-repeat on +/- buttons (pointer events, touch-compatible)</li>
+        <li>Hover star name in grid to see perk tooltip</li>
+        <li>Progress counter in panel header (unlocked / maxed)</li>
+        <li>Reset Levels button to zero all star levels</li>
+        <li>Target perk now shows vein types alongside the perk description</li>
+      </ul>
       <h3>v1.0.0</h3>
       <ul>
         <li>Stargazing Floor Picker: select unlocked stars, pick a target, see the best floor to camp</li>
@@ -264,6 +275,19 @@ function saveUnlocked() { localStorage.setItem(SK_UNLOCK, JSON.stringify([...unl
 function saveLevels() { localStorage.setItem(SK_LEVELS, JSON.stringify(levels)); }
 function saveTarget(v) { localStorage.setItem(SK_TARGET, v); }
 
+// Hold-to-repeat
+let _holdTimer = null, _holdInterval = null;
+function startHold(fn) { fn(); _holdTimer = setTimeout(() => { _holdInterval = setInterval(fn, 80); }, 400); }
+function stopHold() { clearTimeout(_holdTimer); clearInterval(_holdInterval); _holdTimer = null; _holdInterval = null; }
+
+function updateProgress() {
+  const total = STARS.length;
+  const uCount = STARS.filter(s => unlocked.has(s.name)).length;
+  const mCount = STARS.filter(s => unlocked.has(s.name) && isMaxed(s)).length;
+  const el = document.getElementById("starProgress");
+  if (el) el.textContent = `${uCount}/${total} unlocked` + (mCount ? ` · ${mCount} maxed` : "");
+}
+
 function isMaxed(star) {
   return (levels[star.name] || 0) >= star.maxLevel;
 }
@@ -297,7 +321,7 @@ function buildUI() {
       const lvl = levels[star.name] || 0;
       div.innerHTML =
         `<input type="checkbox" id="cb-${star.name}" tabindex="-1" ${unlocked.has(star.name) ? "checked" : ""}>` +
-        `<label for="cb-${star.name}">${star.name}</label>` +
+        `<label for="cb-${star.name}">${star.name}<span class="tip-text">${star.perk}</span></label>` +
         `<div class="star-level">` +
           `<button class="lvl-btn" tabindex="-1" data-dir="-1" aria-label="Decrease ${star.name} level">-</button>` +
           `<input type="number" min="0" max="${star.maxLevel}" value="${lvl}" aria-label="${star.name} level" data-star="${star.name}">` +
@@ -313,6 +337,7 @@ function buildUI() {
         saveUnlocked();
         updateResults();
         populateTargetOptions();
+        updateProgress();
       });
 
       // Click label: select as target
@@ -330,6 +355,7 @@ function buildUI() {
         saveTarget(star.name);
         updateResults();
         updateTargetHighlight();
+        updateProgress();
       });
 
       // Level input
@@ -342,12 +368,12 @@ function buildUI() {
         div.classList.toggle("maxed", v >= star.maxLevel);
         saveLevels();
         updateResults();
+        updateProgress();
       });
 
-      // +/- buttons
+      // +/- buttons (hold-to-repeat)
       div.querySelectorAll(".lvl-btn").forEach(btn => {
-        btn.addEventListener("click", e => {
-          e.stopPropagation();
+        const step = () => {
           const dir = parseInt(btn.dataset.dir);
           let v = (parseInt(lvlInput.value) || 0) + dir;
           v = Math.max(0, Math.min(star.maxLevel, v));
@@ -356,7 +382,12 @@ function buildUI() {
           div.classList.toggle("maxed", v >= star.maxLevel);
           saveLevels();
           updateResults();
-        });
+          updateProgress();
+        };
+        btn.addEventListener("pointerdown", e => { e.stopPropagation(); startHold(step); });
+        btn.addEventListener("pointerup", stopHold);
+        btn.addEventListener("pointercancel", stopHold);
+        btn.addEventListener("pointerleave", stopHold);
       });
 
       grid.appendChild(div);
@@ -429,7 +460,8 @@ function updateResults() {
   }
 
   const target = STARS.find(s => s.name === targetName);
-  perkEl.textContent = target.perk;
+  const uniqueVeins = [...new Set(target.veins)].join(", ");
+  perkEl.innerHTML = target.perk + `<br><span style="font-size:10px;color:var(--t3)">Veins: ${uniqueVeins}</span>`;
 
   const setResults = target.floors.map((floor, setIdx) => {
     const coStars = STARS.filter(s =>
@@ -510,6 +542,16 @@ function selectAll(state) {
   saveUnlocked();
   updateResults();
   populateTargetOptions();
+  updateProgress();
+}
+
+function resetLevels() {
+  levels = {};
+  saveLevels();
+  document.querySelectorAll(".star-level input[type=number]").forEach(inp => { inp.value = 0; });
+  document.querySelectorAll(".star-item").forEach(el => el.classList.remove("maxed"));
+  updateResults();
+  updateProgress();
 }
 
 function openChangelog() {
@@ -525,6 +567,7 @@ document.addEventListener("keydown", e => {
 buildUI();
 populateTargetOptions();
 updateResults();
+updateProgress();
 </script>
 </body>
 </html>
