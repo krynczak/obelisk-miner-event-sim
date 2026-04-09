@@ -1,5 +1,23 @@
 # Changelog
 
+## v2.2.0
+- Accessibility: h1 heading, skip link, focus-visible styles, prefers-reduced-motion
+- Semantic HTML: `<main>` landmark, modal role/aria-label, budget label `for` attributes
+- All upgrade/gem inputs and buttons get aria-labels for screen readers
+- Modal focus trap with focus return on close
+- Touch targets: .ubtn and .help-btn hit areas expanded to 44px via ::after
+- Hover effects gated behind @media (hover: hover) for touch devices
+- Fix: transition: all replaced with specific properties (.res-btn, .help-btn, .opt-seg-btn)
+- Input font-size bumped to 16px (prevents iOS auto-zoom)
+- Version check: notifies when a new version is deployed
+
+## Stargazing v1.2.0
+- Accessibility: h1 heading, skip link, modal focus trap with focus return
+- Hover effects gated behind @media (hover: hover) for touch devices
+- Body font-size bumped to 16px (accessibility minimum)
+- Scale on press corrected to 0.96
+- Version check: notifies when a new version is available
+
 ## Stargazing v1.1.0
 - Hold-to-repeat on +/- buttons (pointer events, touch-compatible)
 - Hover star name in grid to see perk tooltip
