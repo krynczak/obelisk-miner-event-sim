@@ -1,5 +1,19 @@
 # Changelog
 
+## Stargazing v1.0.0
+- New tool: Stargazing Floor Picker (stargazing.html) - select unlocked stars, pick a target, see the best floor to camp
+- Star level tracking with +/- controls; maxed stars excluded from recommendations
+- Top floors ranking when no target is selected
+- Vein types and floor debuffs displayed per floor card
+- Co-star perk tooltips on hover
+- Stars grouped by game phase (Early / Mid / End Game)
+- Target dropdown grouped with optgroup
+- Click star name to select as target (auto-unlocks if locked)
+- State persistence (unlocked stars, levels, target) via localStorage
+- Mobile responsive layout
+- Accessibility: semantic landmarks, aria-labels, focus-visible, reduced motion, touch targets
+- Link from Event Sim header to Stargazing
+
 ## v2.1.0
 - Enable MC fallback in max wave mode: HP, block, speed, and other survival upgrades now show wave gain even when the deterministic sim can't detect it (marginal gains captured via 200 paired MC runs)
 - MC uses fractional wave (wave + sub/5) for precision in wave mode
