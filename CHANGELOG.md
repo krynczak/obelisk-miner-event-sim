@@ -1,5 +1,12 @@
 # Changelog
 
+## Stargazing v1.1.0
+- Hold-to-repeat on +/- buttons (pointer events, touch-compatible)
+- Hover star name in grid to see perk tooltip
+- Progress counter in panel header (unlocked / maxed)
+- Reset Levels button to zero all star levels
+- Target perk now shows vein types alongside the perk description
+
 ## Stargazing v1.0.0
 - New tool: Stargazing Floor Picker (stargazing.html) - select unlocked stars, pick a target, see the best floor to camp
 - Star level tracking with +/- controls; maxed stars excluded from recommendations
