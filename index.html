@@ -1094,14 +1094,14 @@ function budgetPlan(){
   const levels=upgrades.map(tier=>[...tier]);
   const ordered=[];
   const summary={};
-  // Use avgGain from current approxCache for indirect formulas
   const cVals=Object.entries(approxCache).filter(([k,v])=>k!=='base'&&v>0).map(([,v])=>v);
   const avgGain=cVals.length?cVals.reduce((a,b)=>a+b,0)/cVals.length:0;
-  const MAX_ITER=600;
+  const MAX_ITER=600,LOOKAHEAD=20;
   for(let iter=0;iter<MAX_ITER;iter++){
     const{p:bp,e:be}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
     const baseR=analyticalSim(bp,be);
-    let bestGain=0,bestTi=-1,bestUj=-1,bestCost=0;
+    // Single-step scan
+    const cands=[];
     for(let ti=0;ti<4;ti++){
       if(res[ti]<=0)continue;
       for(let uj=0;uj<upgradeNames[ti].length;uj++){
@@ -1113,16 +1113,50 @@ function budgetPlan(){
         const cost=costs[ti][uj]*Math.pow(1.25,lvl);
         if(cost>res[ti])continue;
         const gain=computeGainFromLevels(ti,uj,levels,bp,be,baseR,avgGain);
-        if(gain>bestGain){bestGain=gain;bestTi=ti;bestUj=uj;bestCost=cost}
+        if(gain>0)cands.push({ti,uj,gain,cost});
       }
     }
-    if(bestTi===-1)break;
-    levels[bestTi][bestUj]=(levels[bestTi][bestUj]||0)+1;
-    res[bestTi]-=bestCost;
-    const key=`${bestTi}_${bestUj}`;
-    if(!summary[key]){summary[key]={ti:bestTi,uj:bestUj,count:0,totalCost:0,startLvl:upgrades[bestTi][bestUj]||0};ordered.push(key)}
+    if(!cands.length)break;
+    cands.sort((a,b)=>b.gain-a.gain);
+    let pick=cands[0];
+    // 2-step lookahead (first LOOKAHEAD iterations, >1 candidate, greedy not dominant)
+    if(iter<LOOKAHEAD&&cands.length>1&&cands[0].gain<=cands[1].gain*3){
+      const top=cands.slice(0,5);
+      let greedyTotal=0,bestAlt=null,bestAltTotal=-1;
+      for(const c of top){
+        levels[c.ti][c.uj]=(levels[c.ti][c.uj]||0)+1;
+        const savedR=res[c.ti];res[c.ti]-=c.cost;
+        const{p:sp,e:se}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
+        const newBase=analyticalSim(sp,se);
+        let bfGain=0;
+        for(let ti=0;ti<4;ti++){
+          if(res[ti]<=0)continue;
+          for(let uj=0;uj<upgradeNames[ti].length;uj++){
+            const lv2=levels[ti][uj]||0;
+            if(prestigeUnlocked[ti][uj]>prestigeCount)continue;
+            if(uj>0&&(levels[ti][uj-1]||0)<1)continue;
+            if(lv2>=maxLvlFromLevels(ti,uj,levels))continue;
+            const c2=costs[ti][uj]*Math.pow(1.25,lv2);
+            if(c2>res[ti])continue;
+            const g=computeGainFromLevels(ti,uj,levels,sp,se,newBase,avgGain);
+            if(g>bfGain)bfGain=g;
+          }
+        }
+        levels[c.ti][c.uj]--;
+        res[c.ti]=savedR;
+        const total=c.gain+bfGain;
+        if(c===cands[0])greedyTotal=total;
+        else if(total>bestAltTotal){bestAltTotal=total;bestAlt=c}
+      }
+      if(bestAlt&&bestAltTotal>greedyTotal*1.05)pick=bestAlt;
+    }
+    // Buy
+    levels[pick.ti][pick.uj]=(levels[pick.ti][pick.uj]||0)+1;
+    res[pick.ti]-=pick.cost;
+    const key=`${pick.ti}_${pick.uj}`;
+    if(!summary[key]){summary[key]={ti:pick.ti,uj:pick.uj,count:0,totalCost:0,startLvl:upgrades[pick.ti][pick.uj]||0};ordered.push(key)}
     summary[key].count++;
-    summary[key].totalCost+=bestCost;
+    summary[key].totalCost+=pick.cost;
   }
   renderBudgetResults(ordered,summary,res);
 }
@@ -1148,6 +1182,77 @@ function budgetBuy(ti,uj,targetLvl,totalCost){
   inp.value=formatNumber(Math.max(0,Math.round(current-totalCost)));
   approxCache={};runAndRender();budgetPlan();
 }
+// Validation harness: compare greedy vs 2-step lookahead budget strategies.
+// Usage: compareBudgetStrategies([10000,10000,10000,10000])
+window.compareBudgetStrategies=function(budgets){
+  function runStrategy(useLookahead){
+    const res=budgets.slice();
+    const lv=upgrades.map(tier=>[...tier]);
+    const cVals=Object.entries(approxCache).filter(([k,v])=>k!=='base'&&v>0).map(([,v])=>v);
+    const avg=cVals.length?cVals.reduce((a,b)=>a+b,0)/cVals.length:0;
+    let iters=0,overrides=0;
+    const t0=performance.now();
+    for(let iter=0;iter<600;iter++){
+      const{p:bp,e:be}=parseUpgrades(lv,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
+      const baseR=analyticalSim(bp,be);
+      const cands=[];
+      for(let ti=0;ti<4;ti++){
+        if(res[ti]<=0)continue;
+        for(let uj=0;uj<upgradeNames[ti].length;uj++){
+          const lvl=lv[ti][uj]||0,maxL=maxLvlFromLevels(ti,uj,lv);
+          if(prestigeUnlocked[ti][uj]>prestigeCount)continue;
+          if(uj>0&&(lv[ti][uj-1]||0)<1)continue;
+          if(lvl>=maxL)continue;
+          const cost=costs[ti][uj]*Math.pow(1.25,lvl);
+          if(cost>res[ti])continue;
+          const gain=computeGainFromLevels(ti,uj,lv,bp,be,baseR,avg);
+          if(gain>0)cands.push({ti,uj,gain,cost});
+        }
+      }
+      if(!cands.length)break;
+      cands.sort((a,b)=>b.gain-a.gain);
+      let pick=cands[0];
+      if(useLookahead&&iter<20&&cands.length>1&&cands[0].gain<=cands[1].gain*3){
+        const top=cands.slice(0,5);
+        let greedyTotal=0,bestAlt=null,bestAltTotal=-1;
+        for(const c of top){
+          lv[c.ti][c.uj]=(lv[c.ti][c.uj]||0)+1;
+          const savedR=res[c.ti];res[c.ti]-=c.cost;
+          const{p:sp,e:se}=parseUpgrades(lv,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
+          const nb=analyticalSim(sp,se);
+          let bf=0;
+          for(let ti=0;ti<4;ti++){
+            if(res[ti]<=0)continue;
+            for(let uj=0;uj<upgradeNames[ti].length;uj++){
+              const l2=lv[ti][uj]||0;
+              if(prestigeUnlocked[ti][uj]>prestigeCount)continue;
+              if(uj>0&&(lv[ti][uj-1]||0)<1)continue;
+              if(l2>=maxLvlFromLevels(ti,uj,lv))continue;
+              const c2=costs[ti][uj]*Math.pow(1.25,l2);
+              if(c2>res[ti])continue;
+              const g=computeGainFromLevels(ti,uj,lv,sp,se,nb,avg);
+              if(g>bf)bf=g;
+            }
+          }
+          lv[c.ti][c.uj]--;
+          res[c.ti]=savedR;
+          const total=c.gain+bf;
+          if(c===cands[0])greedyTotal=total;
+          else if(total>bestAltTotal){bestAltTotal=total;bestAlt=c}
+        }
+        if(bestAlt&&bestAltTotal>greedyTotal*1.05){pick=bestAlt;overrides++}
+      }
+      lv[pick.ti][pick.uj]=(lv[pick.ti][pick.uj]||0)+1;
+      res[pick.ti]-=pick.cost;
+      iters++;
+    }
+    const{p,e}=parseUpgrades(lv,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
+    const wave=analyticalSim(p,e)[0];
+    return{wave:+wave.toFixed(2),iters,overrides,ms:Math.round(performance.now()-t0)};
+  }
+  const g=runStrategy(false),l=runStrategy(true);
+  console.table({greedy:g,lookahead:l,delta:{wave:+(l.wave-g.wave).toFixed(2),overrides:l.overrides,extraMs:l.ms-g.ms}});
+};
 
 function runAndRender(){
   const{p,e}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
