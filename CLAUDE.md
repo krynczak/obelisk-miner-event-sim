@@ -6,8 +6,15 @@ Single-file HTML/JS/CSS app at `index.html`. No build system. Deployed via GitHu
 - Do not rebuild the upgrade DOM on value changes - it breaks Tab focus
 - Upgrade names, costs, and prestige unlocks must match the [official wiki](https://shminer.miraheze.org/wiki/Events)
 - All user-facing text in English
-- Version bump (semver) and CHANGELOG.md entry on every release
-- After every push: monitor GitHub Pages deploy with `gh run watch $(gh run list --limit 1 --json databaseId -q '.[0].databaseId') --interval 5` and notify when the change is live
+
+## Release Checklist
+Each tool (index.html, stargazing.html) has its own version in the header and in-app changelog. On every version bump:
+1. Update the `<span class="version">vX.Y.Z</span>` in the relevant file's header
+2. `CHANGELOG.md`: add matching entry at the top (index.html loads this file dynamically via fetch)
+3. stargazing.html: also add an `<h3>` entry inside the static changelog modal in the HTML
+4. Verify version strings match across header, CHANGELOG.md, and in-app changelog
+5. For version strings, use separate targeted edits (one for the header, one for the changelog h3) - `replace_all` would also match version strings in old changelog entries
+6. After push: `gh run watch $(gh run list --limit 1 --json databaseId -q '.[0].databaseId') --interval 5` and notify when live
 
 ## Reference
 - `ARCHITECTURE.md` - code structure, game formulas, gain calculation system, variable names
