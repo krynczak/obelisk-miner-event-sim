@@ -1146,10 +1146,12 @@ window.validateAnalyticalSim=function(mcRuns=10000){
     const{p,e}=parseUpgrades(upg,playerStatsBase,enemyStatsBase,pres,gem);
     const mc=FullEventSim(p,e,mcRuns);
     const an=analyticalSim(p,e);
+    const det=avgEvent_short(p,e);
+    const detWave=det[0]>0?det[0]+1-det[1]*0.2:0;
     const delta=Math.abs(an[0]-mc.avgDistance);
     const pass=delta<0.5;
-    results.push({label,analytical:an[0].toFixed(2),mc:mc.avgDistance.toFixed(2),delta:delta.toFixed(3),pass});
-    console.log(`${pass?'PASS':'FAIL'} ${label}: analytical=${an[0].toFixed(2)} mc=${mc.avgDistance.toFixed(2)} delta=${delta.toFixed(3)}`);
+    results.push({label,analytical:an[0].toFixed(2),det:detWave.toFixed(2),mc:mc.avgDistance.toFixed(2),delta:delta.toFixed(3),pass});
+    console.log(`${pass?'PASS':'FAIL'} ${label}: analytical=${an[0].toFixed(2)} det=${detWave.toFixed(2)} mc=${mc.avgDistance.toFixed(2)} delta=${delta.toFixed(3)}`);
   }
   const failures=results.filter(r=>!r.pass);
   console.log(`\n${results.length-failures.length}/${results.length} passed (threshold: <0.5 waves)`);
