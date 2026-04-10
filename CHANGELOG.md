@@ -1,5 +1,11 @@
 # Changelog
 
+## Stargazing v1.4.1
+- Fix level controls misaligned across star items (consistent /max label width)
+- Hide level controls for locked stars (levels don't exist when locked)
+- Minimum level is now 1 for unlocked stars (game starts at level 1, not 0)
+- Migrate existing saved data: level 0 promoted to 1 for unlocked stars
+
 ## v2.4.0
 - UX consistency: viewport meta tag, header/panel box-shadows, modal-close touch target
 - Undo toast on prestige reset (4s with undo link)
