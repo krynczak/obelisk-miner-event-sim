@@ -1,5 +1,23 @@
 # Changelog
 
+## v2.4.0
+- UX consistency: viewport meta tag, header/panel box-shadows, modal-close touch target
+- Undo toast on prestige reset (4s with undo link)
+- Keyboard shortcut: press ? to open changelog
+- Click brand title to scroll to top
+- Panel entrance animations (staggered fade-in)
+- Button active state uses scale(0.96) instead of background change
+- Easing CSS variables (--ease-out, --ease-snap)
+- Focus-visible outline standardized to 2px
+- Touch target insets standardized for 44px minimum
+
+## Stargazing v1.4.0
+- UX consistency: custom scrollbar, help-btn touch target expanded to 44px
+- Undo toast on Lock All and Reset Levels (4s with undo link)
+- Keyboard shortcut: press ? to open changelog
+- Click brand title to scroll to top
+- Panel entrance animations (staggered fade-in)
+
 ## v2.3.0
 - Remove zoom:1.33 from body - all CSS values scaled to match previous visual output
 - Unified type scale (--fs-micro through --fs-lg) shared with Stargazing tool
