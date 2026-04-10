@@ -555,7 +555,11 @@ function analyticalSim(player,enemy){
 // avgGain = mean of positive combat gains (for indirect value formulas; 0 during pass 1).
 function computeUpgradeGain(ti,uj,p,e,baseR,avgGain){
   const type=upgradeType[ti][uj];
-  if(type==='cap')return 0;
+  if(type==='cap'){
+    if(!avgGain)return 0;
+    if(ti===3&&uj===CAP_OF_CAPS_IDX)return computeCapOfCapsCompoundGain(baseR,avgGain);
+    return computeCapCompoundGain(ti,uj,baseR,avgGain);
+  }
   if(offenseOnly[ti][uj]&&get_highest_wave_killed_in_x_hits(p,e,1)>Math.floor(baseR[0]))return 0;
   if(type==='speed'){
     if(!avgGain)return 0; // pass 1: skip
@@ -601,10 +605,50 @@ function computeUpgradeGain(ti,uj,p,e,baseR,avgGain){
   upgrades[ti][uj]--;
   return analyticalSim(pu,eu)[0]-baseR[0];
 }
+// Cap compound gain: sum of wave gains from each maxed upgrade that +1 cap unlocks.
+function computeCapCompoundGain(ti,uj,baseR,avgGain){
+  const maxedUpgs=[];
+  for(let u=0;u<upgradeNames[ti].length;u++){
+    if(u!==uj&&(upgrades[ti][u]||0)>=currentMaxLvl(ti,u))maxedUpgs.push(u);
+  }
+  if(!maxedUpgs.length)return 0;
+  upgrades[ti][uj]=(upgrades[ti][uj]||0)+1;
+  let compound=0;
+  for(const u of maxedUpgs){
+    // Only count if cap+1 actually raised this upgrade's max level
+    if((upgrades[ti][u]||0)<currentMaxLvl(ti,u))
+      compound+=computeUpgradeGain(ti,u,cachedP,cachedE,baseR,avgGain);
+  }
+  upgrades[ti][uj]--;
+  return compound;
+}
+// Cap of Caps (T4[6]): cascade depth=2. Unlocks cap upgrades, which unlock regular upgrades.
+function computeCapOfCapsCompoundGain(baseR,avgGain){
+  const maxedCaps=[];
+  for(let t=0;t<4;t++){
+    const ci=capUpgIdx[t];
+    if((upgrades[t][ci]||0)>=currentMaxLvl(t,ci))maxedCaps.push(t);
+  }
+  if(!maxedCaps.length)return 0;
+  upgrades[3][CAP_OF_CAPS_IDX]=(upgrades[3][CAP_OF_CAPS_IDX]||0)+1;
+  let compound=0;
+  for(const t of maxedCaps){
+    const ci=capUpgIdx[t];
+    // Only count if cap-of-caps+1 actually raised this cap's max level
+    if((upgrades[t][ci]||0)<currentMaxLvl(t,ci))
+      compound+=computeCapCompoundGain(t,ci,baseR,avgGain);
+  }
+  upgrades[3][CAP_OF_CAPS_IDX]--;
+  return compound;
+}
 // Budget planner variant: uses local levels array instead of global upgrades.
 function computeGainFromLevels(ti,uj,levels,bp,be,baseR,avgGain){
   const type=upgradeType[ti][uj];
-  if(type==='cap')return 0;
+  if(type==='cap'){
+    if(!avgGain)return 0;
+    if(ti===3&&uj===CAP_OF_CAPS_IDX)return computeCapOfCapsCompoundFromLevels(levels,bp,be,baseR,avgGain);
+    return computeCapCompoundGainFromLevels(ti,uj,levels,bp,be,baseR,avgGain);
+  }
   if(offenseOnly[ti][uj]&&get_highest_wave_killed_in_x_hits(bp,be,1)>Math.floor(baseR[0]))return 0;
   if(type==='speed'){
     if(!avgGain)return 0;
@@ -646,6 +690,39 @@ function computeGainFromLevels(ti,uj,levels,bp,be,baseR,avgGain){
   const{p,e}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
   levels[ti][uj]--;
   return analyticalSim(p,e)[0]-baseR[0];
+}
+// Budget planner cap compound gain variants (use local levels array).
+function computeCapCompoundGainFromLevels(ti,uj,levels,bp,be,baseR,avgGain){
+  const maxedUpgs=[];
+  for(let u=0;u<upgradeNames[ti].length;u++){
+    if(u!==uj&&(levels[ti][u]||0)>=maxLvlFromLevels(ti,u,levels))maxedUpgs.push(u);
+  }
+  if(!maxedUpgs.length)return 0;
+  levels[ti][uj]=(levels[ti][uj]||0)+1;
+  let compound=0;
+  for(const u of maxedUpgs){
+    if((levels[ti][u]||0)<maxLvlFromLevels(ti,u,levels))
+      compound+=computeGainFromLevels(ti,u,levels,bp,be,baseR,avgGain);
+  }
+  levels[ti][uj]--;
+  return compound;
+}
+function computeCapOfCapsCompoundFromLevels(levels,bp,be,baseR,avgGain){
+  const maxedCaps=[];
+  for(let t=0;t<4;t++){
+    const ci=capUpgIdx[t];
+    if((levels[t][ci]||0)>=maxLvlFromLevels(t,ci,levels))maxedCaps.push(t);
+  }
+  if(!maxedCaps.length)return 0;
+  levels[3][CAP_OF_CAPS_IDX]=(levels[3][CAP_OF_CAPS_IDX]||0)+1;
+  let compound=0;
+  for(const t of maxedCaps){
+    const ci=capUpgIdx[t];
+    if((levels[t][ci]||0)<maxLvlFromLevels(t,ci,levels))
+      compound+=computeCapCompoundGainFromLevels(t,ci,levels,bp,be,baseR,avgGain);
+  }
+  levels[3][CAP_OF_CAPS_IDX]--;
+  return compound;
 }
 
 // ── UI DATA ──────────────────────────────────────────────────
@@ -874,10 +951,15 @@ function refreshUpgradeValues(){
       const locked=presReq>prestigeCount||needsPrev;
       const maxL=currentMaxLvl(ti,uj),lvl=upgrades[ti][uj]||0;
       const isCap=capUpgIdx[ti]===uj||(ti===3&&uj===CAP_OF_CAPS_IDX);
-      let capUseful=false;
-      if(isCap){for(let u=0;u<upgradeNames[ti].length;u++){if(u!==uj&&(upgrades[ti][u]||0)>=currentMaxLvl(ti,u)){capUseful=true;break}}}
+      let capUseful=false,capCount=0;
+      if(isCap&&ti===3&&uj===CAP_OF_CAPS_IDX){
+        // Cap of Caps: check if any tier's cap upgrade is at max
+        for(let t=0;t<4;t++){const ci=capUpgIdx[t];if((upgrades[t][ci]||0)>=currentMaxLvl(t,ci)){capUseful=true;capCount++}}
+      }else if(isCap){
+        for(let u=0;u<upgradeNames[ti].length;u++){if(u!==uj&&(upgrades[ti][u]||0)>=currentMaxLvl(ti,u)){capUseful=true;capCount++}}
+      }
       const canEval=!locked&&cachedP&&lvl<maxL&&(!isCap||capUseful);
-      allGains.push({ti,uj,gain:0,efficiency:0,upgCost:locked||lvl>=maxL?0:costs[ti][uj]*Math.pow(1.25,lvl),locked,needsPrev,lvl,maxL,presReq,canEval});
+      allGains.push({ti,uj,gain:0,efficiency:0,upgCost:locked||lvl>=maxL?0:costs[ti][uj]*Math.pow(1.25,lvl),locked,needsPrev,lvl,maxL,presReq,canEval,capCount});
     }
   }
   // Pass 1: combat + prestige (P>0) gains
@@ -897,7 +979,7 @@ function refreshUpgradeValues(){
   for(const g of allGains){
     if(!g.canEval||g.gain>0)continue;
     const type=upgradeType[g.ti][g.uj];
-    if(type==='speed'||type==='resource'||type==='mixed'||(type==='prestige'&&prestigeCount===0)){
+    if(type==='speed'||type==='resource'||type==='mixed'||type==='cap'||(type==='prestige'&&prestigeCount===0)){
       const key=`${g.ti}_${g.uj}`;
       if(!approxCache[key])approxCache[key]=computeUpgradeGain(g.ti,g.uj,cachedP,cachedE,baseR,avgGain);
       g.gain=approxCache[key];
@@ -910,7 +992,7 @@ function refreshUpgradeValues(){
   const maxGain=Math.max(1,...allGains.map(g=>g.gain));
 
   // Second pass: update DOM
-  for(const{ti,uj,gain,locked,needsPrev,lvl,maxL,presReq}of allGains){
+  for(const{ti,uj,gain,locked,needsPrev,lvl,maxL,presReq,capCount}of allGains){
     const maxed=!locked&&lvl>=maxL;
     document.getElementById(`upg-row-${ti}-${uj}`).className=`upg-row${locked?' locked':maxed?' maxed':''}`;
     const inp=document.getElementById(`upg-inp-${ti}-${uj}`);
@@ -921,7 +1003,7 @@ function refreshUpgradeValues(){
     const lockMsg=presReq>prestigeCount?`Unlocks at Prestige ${presReq}`:'Level Up Previous To Unlock';
     document.getElementById(`upg-name-${ti}-${uj}`).textContent=locked?lockMsg:upgradeNames[ti][uj];
     document.getElementById(`upg-cost-${ti}-${uj}`).textContent=locked?'':formatNumber(costs[ti][uj]*Math.pow(1.25,lvl));
-    const gainStr=locked||lvl>=maxL||gain===0?'':gain>0.05?gain.toFixed(1):'< 0.1';
+    const gainStr=locked||lvl>=maxL||gain===0?'':gain>0.05?gain.toFixed(1)+(capCount?` (unlocks ${capCount})`:''): '< 0.1';
     document.getElementById(`upg-gain-${ti}-${uj}`).textContent=gainStr;
     const pct=gain>0?Math.max(4,Math.round(gain/maxGain*100)):0;
     document.getElementById(`upg-fill-${ti}-${uj}`).style.width=pct+'%';
@@ -1194,6 +1276,35 @@ window.validateAnalyticalSim=function(mcRuns=10000){
   const failures=results.filter(r=>!r.pass);
   console.log(`\n${results.length-failures.length}/${results.length} passed (threshold: <0.5 waves)`);
   if(failures.length>3)console.warn('GATE FAILED: >3 states diverge. Investigate before proceeding.');
+
+  // Cap compound gain sanity check
+  console.log('\n--- Cap compound gain ---');
+  // State: T1 upgrades at max (base max=50 for T1[0], T1[1])
+  const capUpg=[[50,50,25,25,25,25,25,0,0,0],[0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0]];
+  const capGem=[0,0,0,0];
+  const savedUpg=upgrades.map(t=>[...t]);const savedP=prestigeCount;
+  for(let t=0;t<4;t++)for(let u=0;u<capUpg[t].length;u++)upgrades[t][u]=capUpg[t][u];
+  prestigeCount=0;
+  const{p:cp,e:ce}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,capGem);
+  cachedP=cp;cachedE=ce;
+  const capBaseR=analyticalSim(cp,ce);
+  // Compute avgGain from combat upgrades (simplified: just pick a few)
+  const sampleGains=[];
+  for(let u=0;u<7;u++){
+    if(upgradeType[0][u]==='combat'&&upgrades[0][u]<currentMaxLvl(0,u)){
+      sampleGains.push(computeUpgradeGain(0,u,cp,ce,capBaseR,0));
+    }
+  }
+  const capAvgGain=sampleGains.length?sampleGains.filter(g=>g>0).reduce((s,g)=>s+g,0)/Math.max(1,sampleGains.filter(g=>g>0).length):0;
+  const capGain=computeCapCompoundGain(0,7,capBaseR,capAvgGain);
+  console.log(`T1 cap (T1[7]) with ${capUpg[0].filter((v,i)=>i!==7&&v>=maxLevels[0][i]).length} maxed: compound gain = ${capGain.toFixed(3)}`);
+  console.log(capGain>0?'PASS: cap compound gain > 0':'FAIL: cap compound gain should be > 0');
+  // Restore
+  for(let t=0;t<4;t++)for(let u=0;u<savedUpg[t].length;u++)upgrades[t][u]=savedUpg[t][u];
+  prestigeCount=savedP;
+  const{p:rp,e:re}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
+  cachedP=rp;cachedE=re;
+
   return results;
 };
 </script>
