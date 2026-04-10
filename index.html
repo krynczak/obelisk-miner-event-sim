@@ -462,7 +462,8 @@ function avgEvent_short(player,enemy){
 // Normal CDF via Hastings polynomial approximation (~700ns, 7.5e-8 accuracy)
 function Phi(z){if(z<-8)return 0;if(z>8)return 1;const t=1/(1+.2316419*Math.abs(z)),d=.3989423*Math.exp(-z*z/2),p=d*t*(.3193815+t*(-.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return z>0?1-p:p}
 // Analytical sim: returns [expectedWave, subzone, totalTime] using CLT-based survival probabilities.
-// Replaces mcGainForUpgrade for gain calculation - deterministic, no bias, ~0.3ms per call.
+// Iterates per SUBZONE (5 per wave) for intra-wave death resolution.
+// Metric matches FullEventSim.avgDistance: expectedSubzones/5 + 1.
 function analyticalSim(player,enemy){
   // Fast-path: 100% block = invincible
   if(player.blockChance>=1){
@@ -486,11 +487,10 @@ function analyticalSim(player,enemy){
   const vpDmg=Math.max(0,epDmg2-epDmg*epDmg);
   const epDmg4=epDmg*epDmg*epDmg*epDmg;
 
-  let cumE=0,cumVar=0,expectedWave=0,time=0,currentWave=1,remainder=0,dead=false;
+  let cumE=0,cumVar=0,expSub=0,time=0,currentWave=1,remainder=0,dead=false;
   for(let hitsToKill=1;hitsToKill<=10;hitsToKill++){
     const maxWaveForHits=get_highest_wave_killed_in_x_hits(player,enemy,hitsToKill);
     if(maxWaveForHits<currentWave)continue;
-    const timePerWave=5*(hitsToKill*player.defaultAtkTime/player.atkSpeed+player.defaultWalkTime/player.walkSpeed)/player.gameSpeed;
     const topWave=Math.min(maxWaveForHits,MAX_WAVE);
     for(let wave=currentWave;wave<=topWave;wave++){
       // Enemy damage moments per hit at this wave
@@ -500,29 +500,39 @@ function analyticalSim(player,enemy){
       const eHit=(1-block)*baseDmg*(1+eCrit*(eCritMul-1));
       const eHit2=(1-block)*baseDmg*baseDmg*(1+eCrit*(eCritMul*eCritMul-1));
       const vHit=Math.max(0,eHit2-eHit*eHit);
-      // Expected enemy hits this wave (5 subzones, attack speed interleaving)
       const enemyAtkSpd=enemy.atkSpeed+wave*0.02;
-      const rawHits=remainder+hitsToKill*5*enemyAtkSpd/player.atkSpeed;
-      remainder=rawHits%1;
-      const eHw=Math.floor(rawHits);
-      // Player crit -> hitsToKill variance (delta method, 5 independent subzones)
       const enemyHP=enemy.baseHealth+enemy.healthScaling*wave;
-      const vHw=epDmg4>0?5*enemyHP*enemyHP*vpDmg/epDmg4:0;
-      // Accumulate (law of total variance)
-      cumE+=eHw*eHit;
-      cumVar+=eHw*vHit+vHw*eHit*eHit;
-      // Survival probability for this wave
-      let pSurv;
-      if(cumVar<=0)pSurv=hp>cumE?1:0;
-      else pSurv=Phi((hp-cumE)/Math.sqrt(cumVar));
-      expectedWave+=pSurv;
-      time+=timePerWave;
-      if(pSurv<1e-9){dead=true;break;}
+      // Per-subzone hitsToKill variance (delta method, 1 encounter per subzone)
+      const vHtk=epDmg4>0?enemyHP*enemyHP*vpDmg/epDmg4:0;
+      const atkRatio=enemyAtkSpd/player.atkSpeed;
+      const timePerSub=(hitsToKill*player.defaultAtkTime/player.atkSpeed+player.defaultWalkTime/player.walkSpeed)/player.gameSpeed;
+      // Iterate 5 subzones per wave
+      for(let s=0;s<5;s++){
+        // Enemy hits this subzone (with remainder tracking across subzones)
+        const rawHits=remainder+hitsToKill*atkRatio;
+        remainder=rawHits%1;
+        const eHw=Math.floor(rawHits);
+        // Variance from hitsToKill uncertainty: Var[hits] = Var[htk] * ratio^2
+        const vHw=vHtk*atkRatio*atkRatio;
+        // Accumulate cumulative damage (law of total variance)
+        cumE+=eHw*eHit;
+        cumVar+=eHw*vHit+vHw*eHit*eHit;
+        // Survival probability after this subzone
+        let pSurv;
+        if(cumVar<=0)pSurv=hp>cumE?1:0;
+        else pSurv=Phi((hp-cumE)/Math.sqrt(cumVar));
+        expSub+=pSurv;
+        time+=timePerSub;
+        if(pSurv<1e-9){dead=true;break;}
+      }
+      if(dead)break;
     }
     if(dead)break;
     currentWave=topWave+1;
     if(currentWave>MAX_WAVE)break;
   }
+  // Convert subzones to FullEventSim-compatible metric: distance = subzones/5 + 1
+  const expectedWave=expSub/5+1;
   const frac=expectedWave-Math.floor(expectedWave);
   const sub=Math.max(1,Math.min(5,Math.round(frac*5)||1));
   return[expectedWave,sub,time];
