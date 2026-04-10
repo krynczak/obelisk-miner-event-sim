@@ -186,7 +186,7 @@ main{max-width:1100px;margin:0 auto;padding:20px;width:100%}
 <a href="#main" class="skip-link">Skip to content</a>
 
 <header>
-  <h1 class="brand">STARGAZING FLOOR PICKER <span class="version">v1.2.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()">?</button></h1>
+  <h1 class="brand">STARGAZING FLOOR PICKER <span class="version">v1.3.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()">?</button></h1>
   <a href="index.html" class="btn">Event Sim</a>
 </header>
 
@@ -223,6 +223,11 @@ main{max-width:1100px;margin:0 auto;padding:20px;width:100%}
     <button class="modal-close" aria-label="Close changelog" onclick="closeChangelog()">&#10005;</button>
     <h2>Changelog</h2>
     <div id="changelog-body">
+      <h3>v1.3.0</h3>
+      <ul>
+        <li>Unified type scale with Event Sim (same CSS variables, same values)</li>
+        <li>Modal h3 and button font sizes standardized for cross-tool consistency</li>
+      </ul>
       <h3>v1.2.0</h3>
       <ul>
         <li>Accessibility: h1 heading, skip link, modal focus trap with focus return</li>
@@ -605,7 +610,7 @@ document.addEventListener("keydown", e => {
 
 // ── Version check ────────────────────────────────────────────
 (function checkUpdate() {
-  const CURRENT = "1.2.0", KEY = "stargazing";
+  const CURRENT = "1.3.0", KEY = "stargazing";
   const TS_KEY = "sg-version-check-ts";
   const now = Date.now();
   const last = parseInt(localStorage.getItem(TS_KEY) || "0");

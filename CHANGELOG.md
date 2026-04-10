@@ -1,5 +1,15 @@
 # Changelog
 
+## v2.3.0
+- Remove zoom:1.33 from body - all CSS values scaled to match previous visual output
+- Unified type scale (--fs-micro through --fs-lg) shared with Stargazing tool
+- Both tools now use identical CSS variable names and values for font sizes
+
+## Stargazing v1.3.0
+- Unified type scale with Event Sim (same CSS variables, same values)
+- Modal h3 and button font sizes standardized to match Event Sim
+- Version display uses --fs-xs, buttons use --fs-xs for cross-tool consistency
+
 ## v2.2.0
 - Accessibility: h1 heading, skip link, focus-visible styles, prefers-reduced-motion
 - Semantic HTML: `<main>` landmark, modal role/aria-label, budget label `for` attributes

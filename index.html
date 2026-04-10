@@ -203,7 +203,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 <a href="#main-content" class="skip-link">Skip to content</a>
 
 <header class="header">
-  <h1 class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v2.2.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()" style="margin-left:3px">?</button></h1>
+  <h1 class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v2.3.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()" style="margin-left:3px">?</button></h1>
   <button class="btn-run" style="width:auto;padding:7px 19px;margin:0;font-size:var(--fs-xs)" onclick="approxCache={};runAndRender()">Run Sim ▶</button>
   <button class="res-btn" onclick="cycleResource()">Cycle Resource <span id="res-num">1</span> ▸</button>
   <button class="res-btn" id="btn-export" onclick="exportState()">Export ▾</button>
@@ -987,7 +987,7 @@ showOnboard();
 
 // ── VERSION CHECK ────────────────────────────────────────────
 (function checkUpdate(){
-  const CURRENT='2.2.0',KEY='sim';
+  const CURRENT='2.3.0',KEY='sim';
   const TS_KEY='sim-version-check-ts';
   const now=Date.now();
   const last=parseInt(localStorage.getItem(TS_KEY)||'0');
