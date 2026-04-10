@@ -368,6 +368,22 @@ const offenseOnly=upgradeInstructions.map(tier=>tier.map(fn=>{
   if(Object.keys(enemyStatsBase).some(k=>te[k]!==enemyStatsBase[k]))return false;
   return !Object.keys(playerStatsBase).some(k=>!OFFENSE_STATS.has(k)&&tp[k]!==playerStatsBase[k]);
 }));
+// Classify upgrades by stat category for indirect value formulas
+const SPEED_STATS=new Set(['walkSpeed','gameSpeed','atkSpeed']);
+const RESOURCE_STATS=new Set(['x5money','x2money']);
+const upgradeType=upgradeInstructions.map(tier=>tier.map(fn=>{
+  const tp=Object.assign({},playerStatsBase),te=Object.assign({},enemyStatsBase);
+  fn(1,tp,te);
+  const pc=Object.keys(playerStatsBase).filter(k=>tp[k]!==playerStatsBase[k]);
+  const ec=Object.keys(enemyStatsBase).filter(k=>te[k]!==enemyStatsBase[k]);
+  if(!pc.length&&!ec.length)return'cap';
+  if(ec.length>0)return'combat';
+  if(pc.every(k=>SPEED_STATS.has(k)))return'speed';
+  if(pc.every(k=>RESOURCE_STATS.has(k)))return'resource';
+  if(pc.every(k=>k==='prestigeBonusScale'))return'prestige';
+  if(pc.some(k=>k==='atkSpeed'))return'mixed';
+  return'combat';
+}));
 
 // Apply all upgrade levels + prestige + gems to base stats, return computed player & enemy
 function parseUpgrades(upgs,basePlayer,baseEnemy,prestiges,gems){
@@ -535,21 +551,101 @@ function analyticalSim(player,enemy){
   const sub=Math.max(1,Math.min(5,Math.round(frac*5)||1));
   return[expectedWave,sub,time];
 }
-// Compute wave gain for one upgrade (+1 level) using analyticalSim.
-function computeUpgradeGain(ti,uj,p,e,baseWave){
-  if(offenseOnly[ti][uj]&&get_highest_wave_killed_in_x_hits(p,e,1)>Math.floor(baseWave))return 0;
+// Compute wave gain for one upgrade (+1 level). baseR=[wave,sub,time] from analyticalSim.
+// avgGain = mean of positive combat gains (for indirect value formulas; 0 during pass 1).
+function computeUpgradeGain(ti,uj,p,e,baseR,avgGain){
+  const type=upgradeType[ti][uj];
+  if(type==='cap')return 0;
+  if(offenseOnly[ti][uj]&&get_highest_wave_killed_in_x_hits(p,e,1)>Math.floor(baseR[0]))return 0;
+  if(type==='speed'){
+    if(!avgGain)return 0; // pass 1: skip
+    upgrades[ti][uj]=(upgrades[ti][uj]||0)+1;
+    const{p:pu,e:eu}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
+    upgrades[ti][uj]--;
+    const tPct=Math.max(0,(baseR[2]-analyticalSim(pu,eu)[2])/baseR[2]);
+    return tPct*avgGain;
+  }
+  if(type==='resource'){
+    if(!avgGain)return 0;
+    const bm=(1+(p.x2money||0))*(1+4*((p.x5money||0)/100));
+    upgrades[ti][uj]=(upgrades[ti][uj]||0)+1;
+    const{p:pu}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
+    upgrades[ti][uj]--;
+    const um=(1+(pu.x2money||0))*(1+4*((pu.x5money||0)/100));
+    return((um-bm)/bm)*avgGain;
+  }
+  if(type==='prestige'&&prestigeCount===0){
+    const{p:bp1,e:be1}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,1,gemUp);
+    const w0=analyticalSim(bp1,be1)[0];
+    upgrades[ti][uj]=(upgrades[ti][uj]||0)+1;
+    const{p:up1,e:ue1}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,1,gemUp);
+    upgrades[ti][uj]--;
+    return analyticalSim(up1,ue1)[0]-w0;
+  }
+  if(type==='mixed'){
+    upgrades[ti][uj]=(upgrades[ti][uj]||0)+1;
+    const{p:pu,e:eu}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
+    upgrades[ti][uj]--;
+    // Combat gain with base atkSpeed (avoids overcrediting atkSpeed combat effect)
+    const savedSpd=pu.atkSpeed;
+    pu.atkSpeed=p.atkSpeed;
+    const cGain=analyticalSim(pu,eu)[0]-baseR[0];
+    // Speed gain from atkSpeed component
+    pu.atkSpeed=savedSpd;
+    const tPct=avgGain?Math.max(0,(baseR[2]-analyticalSim(pu,eu)[2])/baseR[2]):0;
+    return cGain+tPct*avgGain;
+  }
+  // Default: combat via analyticalSim
   upgrades[ti][uj]=(upgrades[ti][uj]||0)+1;
   const{p:pu,e:eu}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
   upgrades[ti][uj]--;
-  return analyticalSim(pu,eu)[0]-baseWave;
+  return analyticalSim(pu,eu)[0]-baseR[0];
 }
 // Budget planner variant: uses local levels array instead of global upgrades.
-function computeGainFromLevels(ti,uj,levels,bp,be,baseWave){
-  if(offenseOnly[ti][uj]&&get_highest_wave_killed_in_x_hits(bp,be,1)>Math.floor(baseWave))return 0;
+function computeGainFromLevels(ti,uj,levels,bp,be,baseR,avgGain){
+  const type=upgradeType[ti][uj];
+  if(type==='cap')return 0;
+  if(offenseOnly[ti][uj]&&get_highest_wave_killed_in_x_hits(bp,be,1)>Math.floor(baseR[0]))return 0;
+  if(type==='speed'){
+    if(!avgGain)return 0;
+    levels[ti][uj]++;
+    const{p,e}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
+    levels[ti][uj]--;
+    const tPct=Math.max(0,(baseR[2]-analyticalSim(p,e)[2])/baseR[2]);
+    return tPct*avgGain;
+  }
+  if(type==='resource'){
+    if(!avgGain)return 0;
+    const bm=(1+(bp.x2money||0))*(1+4*((bp.x5money||0)/100));
+    levels[ti][uj]++;
+    const{p}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
+    levels[ti][uj]--;
+    const um=(1+(p.x2money||0))*(1+4*((p.x5money||0)/100));
+    return((um-bm)/bm)*avgGain;
+  }
+  if(type==='prestige'&&prestigeCount===0){
+    const{p:bp1,e:be1}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,1,gemUp);
+    const w0=analyticalSim(bp1,be1)[0];
+    levels[ti][uj]++;
+    const{p:up1,e:ue1}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,1,gemUp);
+    levels[ti][uj]--;
+    return analyticalSim(up1,ue1)[0]-w0;
+  }
+  if(type==='mixed'){
+    levels[ti][uj]++;
+    const{p,e}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
+    levels[ti][uj]--;
+    const savedSpd=p.atkSpeed;
+    p.atkSpeed=bp.atkSpeed;
+    const cGain=analyticalSim(p,e)[0]-baseR[0];
+    p.atkSpeed=savedSpd;
+    const tPct=avgGain?Math.max(0,(baseR[2]-analyticalSim(p,e)[2])/baseR[2]):0;
+    return cGain+tPct*avgGain;
+  }
   levels[ti][uj]++;
   const{p,e}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
   levels[ti][uj]--;
-  return analyticalSim(p,e)[0]-baseWave;
+  return analyticalSim(p,e)[0]-baseR[0];
 }
 
 // ── UI DATA ──────────────────────────────────────────────────
@@ -766,10 +862,10 @@ function buildUpgradesDOM(){
 
 function refreshUpgradeValues(){
   if(!approxCache['base'])
-    approxCache['base']=analyticalSim(cachedP||playerStatsBase,cachedE||enemyStatsBase)[0];
-  const base=approxCache['base'];
+    approxCache['base']=analyticalSim(cachedP||playerStatsBase,cachedE||enemyStatsBase);
+  const baseR=approxCache['base'];
 
-  // First pass: collect all gains
+  // Collect upgrade metadata
   const allGains=[];
   for(let ti=0;ti<4;ti++){
     for(let uj=0;uj<upgradeNames[ti].length;uj++){
@@ -777,21 +873,38 @@ function refreshUpgradeValues(){
       const needsPrev=uj>0&&(upgrades[ti][uj-1]||0)<1;
       const locked=presReq>prestigeCount||needsPrev;
       const maxL=currentMaxLvl(ti,uj),lvl=upgrades[ti][uj]||0;
-      let gain=0;
       const isCap=capUpgIdx[ti]===uj||(ti===3&&uj===CAP_OF_CAPS_IDX);
-      // Cap upgrades only matter if some upgrade in the tier is at its max level
       let capUseful=false;
       if(isCap){for(let u=0;u<upgradeNames[ti].length;u++){if(u!==uj&&(upgrades[ti][u]||0)>=currentMaxLvl(ti,u)){capUseful=true;break}}}
-      if(!locked&&cachedP&&lvl<maxL&&(!isCap||capUseful)){
-        const key=`${ti}_${uj}`;
-        if(!approxCache[key])approxCache[key]=computeUpgradeGain(ti,uj,cachedP,cachedE,base);
-        gain=approxCache[key];
-      }
-      const upgCost=locked||lvl>=maxL?0:costs[ti][uj]*Math.pow(1.25,lvl);
-      const efficiency=upgCost>0&&gain>0?gain/upgCost:0;
-      allGains.push({ti,uj,gain,efficiency,upgCost,locked,needsPrev,lvl,maxL,presReq});
+      const canEval=!locked&&cachedP&&lvl<maxL&&(!isCap||capUseful);
+      allGains.push({ti,uj,gain:0,efficiency:0,upgCost:locked||lvl>=maxL?0:costs[ti][uj]*Math.pow(1.25,lvl),locked,needsPrev,lvl,maxL,presReq,canEval});
     }
   }
+  // Pass 1: combat + prestige (P>0) gains
+  for(const g of allGains){
+    if(!g.canEval)continue;
+    const type=upgradeType[g.ti][g.uj];
+    if(type==='combat'||(type==='prestige'&&prestigeCount>0)){
+      const key=`${g.ti}_${g.uj}`;
+      if(!approxCache[key])approxCache[key]=computeUpgradeGain(g.ti,g.uj,cachedP,cachedE,baseR,0);
+      g.gain=approxCache[key];
+    }
+  }
+  // Compute avgCombatGain for indirect formulas
+  const cGains=allGains.filter(g=>g.gain>0);
+  const avgGain=cGains.length?cGains.reduce((s,g)=>s+g.gain,0)/cGains.length:0;
+  // Pass 2: speed, resource, mixed, prestige at P=0
+  for(const g of allGains){
+    if(!g.canEval||g.gain>0)continue;
+    const type=upgradeType[g.ti][g.uj];
+    if(type==='speed'||type==='resource'||type==='mixed'||(type==='prestige'&&prestigeCount===0)){
+      const key=`${g.ti}_${g.uj}`;
+      if(!approxCache[key])approxCache[key]=computeUpgradeGain(g.ti,g.uj,cachedP,cachedE,baseR,avgGain);
+      g.gain=approxCache[key];
+    }
+  }
+  // Finalize efficiency
+  for(const g of allGains)g.efficiency=g.upgCost>0&&g.gain>0?g.gain/g.upgCost:0;
 
   // Compute max gain for bar scaling
   const maxGain=Math.max(1,...allGains.map(g=>g.gain));
@@ -898,10 +1011,13 @@ function budgetPlan(){
   const levels=upgrades.map(tier=>[...tier]);
   const ordered=[];
   const summary={};
+  // Use avgGain from current approxCache for indirect formulas
+  const cVals=Object.entries(approxCache).filter(([k,v])=>k!=='base'&&v>0).map(([,v])=>v);
+  const avgGain=cVals.length?cVals.reduce((a,b)=>a+b,0)/cVals.length:0;
   const MAX_ITER=600;
   for(let iter=0;iter<MAX_ITER;iter++){
     const{p:bp,e:be}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
-    const baseWave=analyticalSim(bp,be)[0];
+    const baseR=analyticalSim(bp,be);
     let bestGain=0,bestTi=-1,bestUj=-1,bestCost=0;
     for(let ti=0;ti<4;ti++){
       if(res[ti]<=0)continue;
@@ -913,7 +1029,7 @@ function budgetPlan(){
         if(lvl>=maxL)continue;
         const cost=costs[ti][uj]*Math.pow(1.25,lvl);
         if(cost>res[ti])continue;
-        const gain=computeGainFromLevels(ti,uj,levels,bp,be,baseWave);
+        const gain=computeGainFromLevels(ti,uj,levels,bp,be,baseR,avgGain);
         if(gain>bestGain){bestGain=gain;bestTi=ti;bestUj=uj;bestCost=cost}
       }
     }
