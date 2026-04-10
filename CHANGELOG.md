@@ -1,5 +1,13 @@
 # Changelog
 
+## v3.0.0
+- Replace Monte Carlo gain calculation with analytical simulation (deterministic, ~20x faster)
+- Remove res/min optimization mode and Cycle Resource button (single "max wave" target)
+- Indirect value formulas for speed, resource, prestige, and mixed upgrades
+- Cap compound gain: cap upgrades show cascading value from unlocked upgrades
+- Budget planner 2-step lookahead for better upgrade sequencing
+- Prestige advisor with optimal milestones from the official wiki
+
 ## Stargazing v1.5.1
 - Add intro text explaining the tool concept (no perks/skills required)
 - Star counts now read "farms X stars" instead of "X stars"
