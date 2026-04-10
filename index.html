@@ -70,6 +70,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 .help-wrap{position:relative;display:inline}
 .help-popup{display:none;position:absolute;top:29px;left:0;background:var(--s1);border:1px solid var(--b2);padding:13px 16px;font-family:'Space Mono',monospace;font-size:var(--fs-sm);font-weight:400;color:var(--t2);line-height:1.5;letter-spacing:0;text-transform:none;max-width:399px;min-width:266px;z-index:20;white-space:normal}
 .help-popup.open{display:block}
+@media(hover:hover){.help-wrap:hover .help-popup{display:block}}
 
 /* ── Changelog modal ────────────────────── */
 .modal-overlay{display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,.7);z-index:100;justify-content:center;align-items:flex-start;padding:53px 27px;overflow-y:auto}
@@ -215,7 +216,6 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 
 <header class="header">
   <h1 class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v2.4.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()" style="margin-left:3px">?</button></h1>
-  <button class="btn-run" style="width:auto;padding:7px 19px;margin:0;font-size:var(--fs-xs)" onclick="approxCache={};runAndRender()">Run Sim ▶</button>
   <button class="res-btn" onclick="cycleResource()">Cycle Resource <span id="res-num">1</span> ▸</button>
   <button class="res-btn" id="btn-export" onclick="exportState()">Export ▾</button>
   <button class="res-btn" onclick="importState()">Import ▴</button>
