@@ -498,21 +498,10 @@ function analyticalSim(player,enemy){
     const vHit=Math.max(0,eHit2-eHit*eHit);
     const enemyAtkSpd=enemy.atkSpeed+wave*0.02;
     const enemyHP=enemy.baseHealth+enemy.healthScaling*wave;
-    // Expected hitsToKill via Phi summation: E[htk] = Σ P(htk > n)
-    // Corrects Jensen's inequality bias from ceil(HP/E[dmg]) >= E[ceil(HP/dmg)]
-    let eHtkSub=1,vHtk=0;
-    if(vpDmg>0){
-      let ehtk=1,ehtk2=1;// n=0: P(htk>0)=1, contributes 1 to E and 1 to E[X²]
-      for(let n=1;n<20;n++){
-        const pGt=Phi((enemyHP-n*epDmg)/Math.sqrt(n*vpDmg));
-        if(pGt<1e-9)break;
-        ehtk+=pGt;ehtk2+=(2*n+1)*pGt;
-      }
-      eHtkSub=Math.max(1,ehtk);
-      vHtk=Math.max(0,ehtk2-ehtk*ehtk);
-    }else{
-      eHtkSub=Math.max(1,Math.ceil(enemyHP/Math.max(1,epDmg)));
-    }
+    // Expected hitsToKill using average player damage (with crits)
+    const eHtkSub=Math.max(1,Math.ceil(enemyHP/epDmg));
+    // Variance from hitsToKill uncertainty (delta method)
+    const vHtk=epDmg4>0?enemyHP*enemyHP*vpDmg/epDmg4:0;
     const atkRatio=enemyAtkSpd/player.atkSpeed;
     const timePerSub=(eHtkSub*player.defaultAtkTime/player.atkSpeed+player.defaultWalkTime/player.walkSpeed)/player.gameSpeed;
     let dead=false;
