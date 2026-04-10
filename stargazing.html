@@ -44,10 +44,10 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 
 /* ── Header ────────────────────────────── */
 header{display:flex;align-items:center;gap:20px;padding:14px 20px;background:var(--s1);border-bottom:1px solid var(--b1);position:sticky;top:0;z-index:10;box-shadow:0 2px 12px rgba(0,0,0,.4)}
-.brand{font-family:'Chakra Petch',sans-serif;font-size:var(--fs-md);font-weight:700;color:var(--acc);letter-spacing:.06em;text-wrap:balance}
+.brand{font-family:'Chakra Petch',sans-serif;font-size:var(--fs-md);font-weight:700;color:var(--acc);letter-spacing:.06em;text-wrap:balance;cursor:pointer}
 .version{font-size:var(--fs-xs);font-weight:400;color:var(--t3);letter-spacing:.08em}
 .help-btn{background:var(--s3);border:1px solid var(--b1);color:var(--t3);font-family:'Chakra Petch',sans-serif;font-size:var(--fs-micro);font-weight:700;width:16px;height:16px;line-height:14px;text-align:center;cursor:pointer;padding:0;flex-shrink:0;transition:color .12s var(--ease-snap),border-color .12s var(--ease-snap);position:relative}
-.help-btn::after{content:'';position:absolute;inset:-8px}
+.help-btn::after{content:'';position:absolute;inset:-14px}
 @media(hover:hover){.help-btn:hover{color:var(--acc);border-color:var(--acc-dim)}}
 
 /* ── Changelog modal ───────────────────── */
@@ -63,7 +63,8 @@ header{display:flex;align-items:center;gap:20px;padding:14px 20px;background:var
 
 /* ── Layout ────────────────────────────── */
 main{max-width:1100px;margin:0 auto;padding:20px;width:100%}
-.panel{background:var(--s2);border:1px solid var(--b1);padding:18px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.2),0 4px 12px rgba(0,0,0,.15)}
+.panel{background:var(--s2);border:1px solid var(--b1);padding:18px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.2),0 4px 12px rgba(0,0,0,.15);animation:panelIn .3s var(--ease-out) both}
+@keyframes panelIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .ptitle{font-family:'Chakra Petch',sans-serif;font-size:var(--fs-xs);font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin-bottom:12px;padding-bottom:7px;border-bottom:1px solid var(--b1);text-wrap:balance}
 
 /* ── Star grid ─────────────────────────── */
@@ -175,6 +176,16 @@ main{max-width:1100px;margin:0 auto;padding:20px;width:100%}
   .floor-card .floor-num{font-size:28px}
 }
 
+/* ── Scrollbar ────────────────────────── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:3px}
+
+/* ── Toast ────────────────────────────── */
+.toast{position:fixed;bottom:-60px;left:50%;transform:translateX(-50%);background:var(--s1);border:1px solid var(--b2);padding:10px 20px;font-size:var(--fs-sm);color:var(--t2);z-index:200;transition:bottom .3s var(--ease-out);box-shadow:0 4px 16px rgba(0,0,0,.4);white-space:nowrap}
+.toast.show{bottom:20px}
+.toast a{color:var(--acc);text-decoration:none;font-weight:600;margin-left:8px}
+
 /* ── Reduced motion ────────────────────── */
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:0.01ms!important;animation-delay:0s!important;transition-duration:0.01ms!important}
@@ -186,11 +197,12 @@ main{max-width:1100px;margin:0 auto;padding:20px;width:100%}
 <a href="#main" class="skip-link">Skip to content</a>
 
 <header>
-  <h1 class="brand">STARGAZING FLOOR PICKER <span class="version">v1.3.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()">?</button></h1>
+  <h1 class="brand">STARGAZING FLOOR PICKER <span class="version">v1.4.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()">?</button></h1>
   <a href="index.html" class="btn">Event Sim</a>
 </header>
 
 <div id="update-slot"></div>
+<div id="toast" class="toast"></div>
 <main id="main">
   <section class="panel" aria-label="Unlocked Stars">
     <div class="ptitle">Unlocked Stars <span id="starProgress" style="float:right;font-size:var(--fs-micro);font-weight:400;letter-spacing:.06em;color:var(--t3);text-transform:none"></span></div>
@@ -223,6 +235,13 @@ main{max-width:1100px;margin:0 auto;padding:20px;width:100%}
     <button class="modal-close" aria-label="Close changelog" onclick="closeChangelog()">&#10005;</button>
     <h2>Changelog</h2>
     <div id="changelog-body">
+      <h3>v1.4.0</h3>
+      <ul>
+        <li>Undo toast on Lock All and Reset Levels (4s with undo link)</li>
+        <li>Keyboard shortcut: press ? to open changelog</li>
+        <li>Click brand title to scroll to top</li>
+        <li>Panel entrance animations, custom scrollbar, touch target fixes</li>
+      </ul>
       <h3>v1.3.0</h3>
       <ul>
         <li>Unified type scale with Event Sim (same CSS variables, same values)</li>
@@ -563,26 +582,43 @@ function renderTopFloors(container) {
 }
 
 function selectAll(state) {
-  STARS.forEach(s => {
-    if (state) unlocked.add(s.name); else unlocked.delete(s.name);
+  const prev = new Set(unlocked);
+  STARS.forEach(s => { if (state) unlocked.add(s.name); else unlocked.delete(s.name); });
+  syncCheckboxUI();
+  saveUnlocked(); updateResults(); populateTargetOptions(); updateProgress();
+  showToast(state ? "All stars unlocked" : "All stars locked", () => {
+    unlocked = prev; syncCheckboxUI();
+    saveUnlocked(); updateResults(); populateTargetOptions(); updateProgress();
   });
+}
+function syncCheckboxUI() {
   document.querySelectorAll(".star-item input[type=checkbox]").forEach(cb => {
-    cb.checked = state;
-    cb.closest(".star-item").classList.toggle("unlocked", state);
+    const name = cb.closest(".star-item").dataset.star;
+    cb.checked = unlocked.has(name);
+    cb.closest(".star-item").classList.toggle("unlocked", unlocked.has(name));
   });
-  saveUnlocked();
-  updateResults();
-  populateTargetOptions();
-  updateProgress();
 }
 
 function resetLevels() {
+  const prev = { ...levels };
   levels = {};
   saveLevels();
-  document.querySelectorAll(".star-level input[type=number]").forEach(inp => { inp.value = 0; });
-  document.querySelectorAll(".star-item").forEach(el => el.classList.remove("maxed"));
-  updateResults();
-  updateProgress();
+  syncLevelUI();
+  updateResults(); updateProgress();
+  showToast("Levels reset", () => {
+    levels = prev; saveLevels(); syncLevelUI();
+    updateResults(); updateProgress();
+  });
+}
+function syncLevelUI() {
+  document.querySelectorAll(".star-level input[type=number]").forEach(inp => {
+    const name = inp.dataset.star || inp.getAttribute("aria-label")?.replace(" level","");
+    inp.value = levels[name] || 0;
+  });
+  document.querySelectorAll(".star-item").forEach(el => {
+    const star = STARS.find(s => s.name === el.dataset.star);
+    if (star) el.classList.toggle("maxed", (levels[star.name] || 0) >= star.maxLevel);
+  });
 }
 
 // ── Changelog modal with focus trap ──────────────────────────
@@ -600,6 +636,7 @@ function closeChangelog() {
 }
 document.addEventListener("keydown", e => {
   if (e.key === "Escape") closeChangelog();
+  if (e.key === "?" && !e.target.matches("input,textarea,select")) openChangelog();
   const modal = document.getElementById("changelog-modal");
   if (!modal.classList.contains("open") || e.key !== "Tab") return;
   const focusable = modal.querySelectorAll("button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])");
@@ -610,7 +647,7 @@ document.addEventListener("keydown", e => {
 
 // ── Version check ────────────────────────────────────────────
 function checkUpdate() {
-  const CURRENT = "1.3.0", KEY = "stargazing";
+  const CURRENT = "1.4.0", KEY = "stargazing";
   fetch("version.json?t=" + Date.now()).then(r => r.json()).then(data => {
     if (data[KEY] && data[KEY] !== CURRENT) {
       document.getElementById("update-slot").innerHTML = '<div class="update-banner">New version available (v' + data[KEY] + '). <a href="javascript:location.reload(true)">Reload to update</a></div>';
@@ -618,6 +655,21 @@ function checkUpdate() {
   }).catch(() => {});
 }
 checkUpdate(); setInterval(checkUpdate, 60000);
+
+// ── TOAST ────────────────────────────────────────────────────
+let _toastTimer = null;
+function showToast(msg, undoFn) {
+  clearTimeout(_toastTimer);
+  const el = document.getElementById("toast");
+  el.innerHTML = msg + (undoFn ? ' <a href="#" onclick="event.preventDefault();_toastUndo()">Undo</a>' : "");
+  el.classList.add("show");
+  window._toastUndo = undoFn ? () => { undoFn(); hideToast(); } : null;
+  _toastTimer = setTimeout(hideToast, 4000);
+}
+function hideToast() { clearTimeout(_toastTimer); document.getElementById("toast").classList.remove("show"); window._toastUndo = null; }
+
+// ── BRAND SCROLL TO TOP ─────────────────────────────────────
+document.querySelector(".brand").addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
 
 buildUI();
 populateTargetOptions();
