@@ -1,5 +1,9 @@
 # Changelog
 
+## Stargazing v1.5.1
+- Add intro text explaining the tool concept (no perks/skills required)
+- Star counts now read "farms X stars" instead of "X stars"
+
 ## Stargazing v1.5.0
 - Rename "Best Floor" to "Where to Camp" with subtitle explaining the concept
 - Floor cards now show vein type as label instead of "Set 1-5"
