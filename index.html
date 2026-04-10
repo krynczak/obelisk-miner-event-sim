@@ -909,7 +909,7 @@ function renderPrestigeAdvice(){
   const wave=base[0];
   const next=PRESTIGE_MILESTONES.find(m=>m>prestigeCount);
   if(!next){
-    if(wave<250){const d=(250-wave).toFixed(1);el.textContent=`Farm to wave 250 for all rewards (need ${d} more waves)`;el.className='pres-advisor wait'}
+    if(wave<250){const d=(250-wave).toFixed(1);el.textContent=`Farm to wave 250 for last reward (need ${d} more waves)`;el.className='pres-advisor wait'}
     else{el.textContent='All rewards can be claimed.';el.className='pres-advisor done'}
     return;
   }
