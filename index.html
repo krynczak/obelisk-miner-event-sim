@@ -461,8 +461,6 @@ function avgEvent_short(player,enemy){
 }
 // Normal CDF via Hastings polynomial approximation (~700ns, 7.5e-8 accuracy)
 function Phi(z){if(z<-8)return 0;if(z>8)return 1;const t=1/(1+.2316419*Math.abs(z)),d=.3989423*Math.exp(-z*z/2),p=d*t*(.3193815+t*(-.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return z>0?1-p:p}
-// Like get_highest_wave_killed_in_x_hits but using expected player damage (with crits)
-function get_highest_wave_killed_in_x_hits_expected(epDmg,enemy,hits){return Math.floor((hits*epDmg-enemy.baseHealth)/enemy.healthScaling)}
 // Analytical sim: returns [expectedWave, subzone, totalTime] using CLT-based survival probabilities.
 // Iterates per SUBZONE (5 per wave) for intra-wave death resolution.
 // Metric matches FullEventSim.avgDistance: expectedSubzones/5 + 1.
@@ -489,52 +487,40 @@ function analyticalSim(player,enemy){
   const vpDmg=Math.max(0,epDmg2-epDmg*epDmg);
   const epDmg4=epDmg*epDmg*epDmg*epDmg;
 
-  let cumE=0,cumVar=0,expSub=0,time=0,currentWave=1,remainder=0,dead=false;
-  for(let hitsToKill=1;hitsToKill<=10;hitsToKill++){
-    // Use expected player damage (with crits) for wave range assignment
-    const maxWaveForHits=get_highest_wave_killed_in_x_hits_expected(epDmg,enemy,hitsToKill);
-    if(maxWaveForHits<currentWave)continue;
-    const topWave=Math.min(maxWaveForHits,MAX_WAVE);
-    for(let wave=currentWave;wave<=topWave;wave++){
-      // Enemy damage moments per hit at this wave
-      const baseDmg=Math.max(1,round(enemy.atk+wave*enemy.atkScaling));
-      const eCrit=Math.max(0,Math.min(1,(enemy.crit+wave)/100));
-      const eCritMul=Math.max(1,enemy.critDmg+wave*enemy.critDmgScaling);
-      const eHit=(1-block)*baseDmg*(1+eCrit*(eCritMul-1));
-      const eHit2=(1-block)*baseDmg*baseDmg*(1+eCrit*(eCritMul*eCritMul-1));
-      const vHit=Math.max(0,eHit2-eHit*eHit);
-      const enemyAtkSpd=enemy.atkSpeed+wave*0.02;
-      const enemyHP=enemy.baseHealth+enemy.healthScaling*wave;
-      // hitsToKill per subzone: use crit-adjusted expected damage
-      const eHtkSub=Math.max(1,Math.ceil(enemyHP/epDmg));
-      // Variance from hitsToKill uncertainty (delta method, conservative)
-      const vHtk=epDmg4>0?enemyHP*enemyHP*vpDmg/epDmg4:0;
-      const atkRatio=enemyAtkSpd/player.atkSpeed;
-      const timePerSub=(eHtkSub*player.defaultAtkTime/player.atkSpeed+player.defaultWalkTime/player.walkSpeed)/player.gameSpeed;
-      // Iterate 5 subzones per wave
-      for(let s=0;s<5;s++){
-        // Enemy hits this subzone using crit-adjusted hitsToKill
-        const rawHits=remainder+eHtkSub*atkRatio;
-        remainder=rawHits%1;
-        const eHw=Math.floor(rawHits);
-        // Variance from hitsToKill uncertainty: Var[hits] = Var[htk] * ratio^2
-        const vHw=vHtk*atkRatio*atkRatio;
-        // Accumulate cumulative damage (law of total variance)
-        cumE+=eHw*eHit;
-        cumVar+=eHw*vHit+vHw*eHit*eHit;
-        // Survival probability after this subzone
-        let pSurv;
-        if(cumVar<=0)pSurv=hp>cumE?1:0;
-        else pSurv=Phi((hp-cumE)/Math.sqrt(cumVar));
-        expSub+=pSurv;
-        time+=timePerSub;
-        if(pSurv<1e-9){dead=true;break;}
-      }
-      if(dead)break;
+  let cumE=0,cumVar=0,expSub=0,time=0,remainder=0;
+  for(let wave=1;wave<=MAX_WAVE;wave++){
+    // Enemy damage moments per hit at this wave
+    const baseDmg=Math.max(1,round(enemy.atk+wave*enemy.atkScaling));
+    const eCrit=Math.max(0,Math.min(1,(enemy.crit+wave)/100));
+    const eCritMul=Math.max(1,enemy.critDmg+wave*enemy.critDmgScaling);
+    const eHit=(1-block)*baseDmg*(1+eCrit*(eCritMul-1));
+    const eHit2=(1-block)*baseDmg*baseDmg*(1+eCrit*(eCritMul*eCritMul-1));
+    const vHit=Math.max(0,eHit2-eHit*eHit);
+    const enemyAtkSpd=enemy.atkSpeed+wave*0.02;
+    const enemyHP=enemy.baseHealth+enemy.healthScaling*wave;
+    // Expected hitsToKill using average player damage (with crits)
+    const eHtkSub=Math.max(1,Math.ceil(enemyHP/epDmg));
+    // Variance from hitsToKill uncertainty (delta method)
+    const vHtk=epDmg4>0?enemyHP*enemyHP*vpDmg/epDmg4:0;
+    const atkRatio=enemyAtkSpd/player.atkSpeed;
+    const timePerSub=(eHtkSub*player.defaultAtkTime/player.atkSpeed+player.defaultWalkTime/player.walkSpeed)/player.gameSpeed;
+    let dead=false;
+    // Iterate 5 subzones per wave
+    for(let s=0;s<5;s++){
+      const rawHits=remainder+eHtkSub*atkRatio;
+      remainder=rawHits%1;
+      const eHw=Math.floor(rawHits);
+      const vHw=vHtk*atkRatio*atkRatio;
+      cumE+=eHw*eHit;
+      cumVar+=eHw*vHit+vHw*eHit*eHit;
+      let pSurv;
+      if(cumVar<=0)pSurv=hp>cumE?1:0;
+      else pSurv=Phi((hp-cumE)/Math.sqrt(cumVar));
+      expSub+=pSurv;
+      time+=timePerSub;
+      if(pSurv<1e-9){dead=true;break;}
     }
     if(dead)break;
-    currentWave=topWave+1;
-    if(currentWave>MAX_WAVE)break;
   }
   // Convert subzones to FullEventSim-compatible metric: distance = subzones/5 + 1
   const expectedWave=expSub/5+1;
