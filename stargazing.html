@@ -609,15 +609,15 @@ document.addEventListener("keydown", e => {
 });
 
 // ── Version check ────────────────────────────────────────────
-(function checkUpdate() {
+function checkUpdate() {
   const CURRENT = "1.3.0", KEY = "stargazing";
   fetch("version.json?t=" + Date.now()).then(r => r.json()).then(data => {
     if (data[KEY] && data[KEY] !== CURRENT) {
-      const slot = document.getElementById("update-slot");
-      slot.innerHTML = '<div class="update-banner">New version available (v' + data[KEY] + '). <a href="javascript:location.reload(true)">Reload to update</a></div>';
+      document.getElementById("update-slot").innerHTML = '<div class="update-banner">New version available (v' + data[KEY] + '). <a href="javascript:location.reload(true)">Reload to update</a></div>';
     }
   }).catch(() => {});
-})();
+}
+checkUpdate(); setInterval(checkUpdate, 60000);
 
 buildUI();
 populateTargetOptions();
