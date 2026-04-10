@@ -1,5 +1,9 @@
 # Changelog
 
+## Stargazing v1.5.0
+- Rename "Best Floor" to "Where to Camp" with subtitle explaining the concept
+- Floor cards now show vein type as label instead of "Set 1-5"
+
 ## Stargazing v1.4.1
 - Fix level controls misaligned across star items (consistent /max label width)
 - Hide level controls for locked stars (levels don't exist when locked)

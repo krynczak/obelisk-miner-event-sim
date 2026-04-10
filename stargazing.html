@@ -198,7 +198,7 @@ main{max-width:1100px;margin:0 auto;padding:20px;width:100%}
 <a href="#main" class="skip-link">Skip to content</a>
 
 <header>
-  <h1 class="brand">STARGAZING FLOOR PICKER <span class="version">v1.4.1</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()">?</button></h1>
+  <h1 class="brand">STARGAZING FLOOR PICKER <span class="version">v1.5.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()">?</button></h1>
   <a href="index.html" class="btn">Event Sim</a>
 </header>
 
@@ -225,8 +225,8 @@ main{max-width:1100px;margin:0 auto;padding:20px;width:100%}
     </div>
   </section>
 
-  <section class="panel" aria-label="Best Floor">
-    <div class="ptitle">Best Floor</div>
+  <section class="panel" aria-label="Where to Camp">
+    <div class="ptitle">Where to Camp <span style="float:right;font-size:var(--fs-micro);font-weight:400;letter-spacing:.06em;color:var(--t3);text-transform:none">Camp on the highlighted floor to farm the most stars at once</span></div>
     <div id="results" aria-live="polite"><div class="no-target">Select a target star or see top floors below.</div></div>
   </section>
 </main>
@@ -236,7 +236,7 @@ main{max-width:1100px;margin:0 auto;padding:20px;width:100%}
     <button class="modal-close" aria-label="Close changelog" onclick="closeChangelog()">&#10005;</button>
     <h2>Changelog</h2>
     <div id="changelog-body">
-      <h3>v1.4.1</h3>
+      <h3>v1.5.0</h3>
       <ul>
         <li>Undo toast on Lock All and Reset Levels (4s with undo link)</li>
         <li>Keyboard shortcut: press ? to open changelog</li>
@@ -553,9 +553,8 @@ function updateResults() {
     const debuffHTML = r.debuff ? `<div class="floor-debuff">${r.debuff}</div>` : "";
     const starListHTML = r.coStars.length ? r.coStars.map(n => starTipHTML(n)).join(", ") : "-";
     html += `<div class="floor-card${isBest ? " best" : ""}">
-      <div class="set-label">Set ${r.setIdx + 1}</div>
+      <div class="set-label">${r.vein} Vein</div>
       <div class="floor-num">${r.floor}</div>
-      <div class="floor-vein">${r.vein} Vein</div>
       ${debuffHTML}
       <div class="${countClass}">${r.total} star${r.total !== 1 ? "s" : ""}</div>
       <div class="star-list">${starListHTML}</div>
