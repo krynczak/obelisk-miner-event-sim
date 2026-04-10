@@ -502,10 +502,26 @@ function analyticalSim(player,enemy){
       const vHit=Math.max(0,eHit2-eHit*eHit);
       const enemyAtkSpd=enemy.atkSpeed+wave*0.02;
       const enemyHP=enemy.baseHealth+enemy.healthScaling*wave;
-      // Expected hitsToKill including player crits (not just raw atk)
-      const eHtkSub=Math.max(1,Math.ceil(enemyHP/epDmg));
-      // Per-subzone hitsToKill variance (delta method, 1 encounter per subzone)
-      const vHtk=epDmg4>0?enemyHP*enemyHP*vpDmg/epDmg4:0;
+      // HitsToKill: use discrete distribution when possible, delta method otherwise
+      const minHtk=Math.max(1,Math.ceil(enemyHP/Math.max(1,player.atk*pCritDmg)));// best case (crit every hit)
+      const maxHtk=Math.max(1,Math.ceil(enemyHP/Math.max(1,player.atk)));// worst case (no crits)
+      let eHtkSub,vHtk;
+      if(minHtk===maxHtk){
+        // Deterministic: always same hitsToKill regardless of crits
+        eHtkSub=minHtk;vHtk=0;
+      }else if(maxHtk-minHtk<=2){
+        // Small range: compute exact discrete distribution
+        // P(htk=k) via cumulative crit probability for k hits
+        // Simplified: P(htk=minHtk) ≈ pCrit^(hits that need crit), else maxHtk
+        // For htk ∈ {n, n+1}: P(htk=n) = fraction of outcomes where crits suffice
+        const pLow=Math.min(1,Math.max(0,pCrit));// P(at least enough crits to kill in minHtk)
+        eHtkSub=minHtk*pLow+maxHtk*(1-pLow);
+        vHtk=pLow*(1-pLow)*(maxHtk-minHtk)*(maxHtk-minHtk);
+      }else{
+        // Large range: delta method
+        eHtkSub=Math.max(1,Math.ceil(enemyHP/epDmg));
+        vHtk=epDmg4>0?enemyHP*enemyHP*vpDmg/epDmg4:0;
+      }
       const atkRatio=enemyAtkSpd/player.atkSpeed;
       const timePerSub=(eHtkSub*player.defaultAtkTime/player.atkSpeed+player.defaultWalkTime/player.walkSpeed)/player.gameSpeed;
       // Iterate 5 subzones per wave
