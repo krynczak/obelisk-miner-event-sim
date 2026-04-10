@@ -502,14 +502,16 @@ function analyticalSim(player,enemy){
       const vHit=Math.max(0,eHit2-eHit*eHit);
       const enemyAtkSpd=enemy.atkSpeed+wave*0.02;
       const enemyHP=enemy.baseHealth+enemy.healthScaling*wave;
+      // Expected hitsToKill including player crits (not just raw atk)
+      const eHtkSub=Math.max(1,Math.ceil(enemyHP/epDmg));
       // Per-subzone hitsToKill variance (delta method, 1 encounter per subzone)
       const vHtk=epDmg4>0?enemyHP*enemyHP*vpDmg/epDmg4:0;
       const atkRatio=enemyAtkSpd/player.atkSpeed;
-      const timePerSub=(hitsToKill*player.defaultAtkTime/player.atkSpeed+player.defaultWalkTime/player.walkSpeed)/player.gameSpeed;
+      const timePerSub=(eHtkSub*player.defaultAtkTime/player.atkSpeed+player.defaultWalkTime/player.walkSpeed)/player.gameSpeed;
       // Iterate 5 subzones per wave
       for(let s=0;s<5;s++){
-        // Enemy hits this subzone (with remainder tracking across subzones)
-        const rawHits=remainder+hitsToKill*atkRatio;
+        // Enemy hits this subzone using crit-adjusted hitsToKill
+        const rawHits=remainder+eHtkSub*atkRatio;
         remainder=rawHits%1;
         const eHw=Math.floor(rawHits);
         // Variance from hitsToKill uncertainty: Var[hits] = Var[htk] * ratio^2
