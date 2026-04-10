@@ -461,6 +461,25 @@ function avgEvent_short(player,enemy){
 }
 // Normal CDF via Hastings polynomial approximation (~700ns, 7.5e-8 accuracy)
 function Phi(z){if(z<-8)return 0;if(z>8)return 1;const t=1/(1+.2316419*Math.abs(z)),d=.3989423*Math.exp(-z*z/2),p=d*t*(.3193815+t*(-.3565638+t*(1.781478+t*(-1.821256+t*1.330274))));return z>0?1-p:p}
+// Exact E[htk] and Var[htk] for binary player damage (normal vs crit).
+function binomPMF(n,k,p){if(k<0||k>n)return 0;let c=1;for(let i=0;i<k;i++)c=c*(n-i)/(i+1);return c*Math.pow(p,k)*Math.pow(1-p,n-k)}
+function exactHtkMoments(hp,atk,pCrit,pCritDmg){
+  if(pCrit<=0||pCritDmg<=1){const h=Math.max(1,Math.ceil(hp/atk));return{mean:h,variance:0}}
+  if(pCrit>=1){const h=Math.max(1,Math.ceil(hp/round(atk*pCritDmg)));return{mean:h,variance:0}}
+  const nMax=Math.ceil(hp/atk),extra=round(atk*pCritDmg)-atk;
+  let prevCdf=0,mean=0,meanSq=0;
+  for(let n=1;n<=nMax;n++){
+    const shortfall=hp-atk*n;
+    let cdf;
+    if(shortfall<=0){cdf=1}
+    else{const kNeed=Math.ceil(shortfall/extra);if(kNeed>n){prevCdf=0;continue}let pLess=0;for(let k=0;k<kNeed;k++)pLess+=binomPMF(n,k,pCrit);cdf=1-pLess}
+    const pmf=cdf-prevCdf;
+    mean+=n*pmf;meanSq+=n*n*pmf;
+    prevCdf=cdf;
+    if(cdf>=1-1e-12)break;
+  }
+  return{mean:Math.max(1,mean),variance:Math.max(0,meanSq-mean*mean)}
+}
 // Analytical sim: returns [expectedWave, subzone, totalTime] using CLT-based survival probabilities.
 // Iterates per SUBZONE (5 per wave) for intra-wave death resolution.
 // Metric matches FullEventSim.avgDistance: expectedSubzones/5 + 1.
@@ -481,11 +500,6 @@ function analyticalSim(player,enemy){
   const hp=player.health;
   const pCrit=Math.max(0,player.crit)/100;
   const pCritDmg=Math.max(1,player.critDmg);
-  // Player damage moments for hitsToKill variance (H6 fix)
-  const epDmg=player.atk*(1+pCrit*(pCritDmg-1));
-  const epDmg2=player.atk*player.atk*(1+pCrit*(pCritDmg*pCritDmg-1));
-  const vpDmg=Math.max(0,epDmg2-epDmg*epDmg);
-  const epDmg4=epDmg*epDmg*epDmg*epDmg;
 
   let cumE=0,cumVar=0,expSub=0,time=0,remainder=0;
   for(let wave=1;wave<=MAX_WAVE;wave++){
@@ -493,24 +507,23 @@ function analyticalSim(player,enemy){
     const baseDmg=Math.max(1,round(enemy.atk+wave*enemy.atkScaling));
     const eCrit=Math.max(0,Math.min(1,(enemy.crit+wave)/100));
     const eCritMul=Math.max(1,enemy.critDmg+wave*enemy.critDmgScaling);
-    const eHit=(1-block)*baseDmg*(1+eCrit*(eCritMul-1));
-    const eHit2=(1-block)*baseDmg*baseDmg*(1+eCrit*(eCritMul*eCritMul-1));
+    const eCritDmg=eCritMul>1?round(baseDmg*eCritMul):baseDmg;
+    const eHit=(1-block)*((1-eCrit)*baseDmg+eCrit*eCritDmg);
+    const eHit2=(1-block)*((1-eCrit)*baseDmg*baseDmg+eCrit*eCritDmg*eCritDmg);
     const vHit=Math.max(0,eHit2-eHit*eHit);
     const enemyAtkSpd=enemy.atkSpeed+wave*0.02;
     const enemyHP=enemy.baseHealth+enemy.healthScaling*wave;
-    // Expected hitsToKill using average player damage (with crits)
-    const eHtkSub=Math.max(1,Math.ceil(enemyHP/epDmg));
-    // Variance from hitsToKill uncertainty (delta method)
-    const vHtk=epDmg4>0?enemyHP*enemyHP*vpDmg/epDmg4:0;
+    // Exact E[htk] and Var[htk] via binomial player crit distribution
+    const htk=exactHtkMoments(enemyHP,player.atk,pCrit,pCritDmg);
     const atkRatio=enemyAtkSpd/player.atkSpeed;
-    const timePerSub=(eHtkSub*player.defaultAtkTime/player.atkSpeed+player.defaultWalkTime/player.walkSpeed)/player.gameSpeed;
+    const timePerSub=(htk.mean*player.defaultAtkTime/player.atkSpeed+player.defaultWalkTime/player.walkSpeed)/player.gameSpeed;
     let dead=false;
     // Iterate 5 subzones per wave
     for(let s=0;s<5;s++){
-      const rawHits=remainder+eHtkSub*atkRatio;
+      const rawHits=remainder+htk.mean*atkRatio;
       remainder=rawHits%1;
       const eHw=Math.floor(rawHits);
-      const vHw=vHtk*atkRatio*atkRatio;
+      const vHw=htk.variance*atkRatio*atkRatio;
       cumE+=eHw*eHit;
       cumVar+=eHw*vHit+vHw*eHit*eHit;
       let pSurv;
