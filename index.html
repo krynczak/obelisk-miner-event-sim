@@ -195,7 +195,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 .btn-run:active{opacity:.6}
 
 /* ── Update banner ─────────────────────── */
-.update-banner{background:var(--s3);border:1px solid var(--acc-dim);padding:8px 19px;margin:13px 13px 0;font-size:var(--fs-sm);color:var(--t2);display:flex;align-items:center;gap:13px}
+.update-banner{background:var(--s3);border-bottom:1px solid var(--acc-dim);padding:8px 19px;font-size:var(--fs-sm);color:var(--t2);display:flex;align-items:center;justify-content:center;gap:13px;text-align:center}
 .update-banner a{color:var(--acc);text-decoration:none;font-weight:600}
 @media(hover:hover){.update-banner a:hover{text-decoration:underline}}
 /* ── Toast ─────────────────────────────── */
@@ -221,6 +221,8 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
   <button class="res-btn" onclick="importState()">Import ▴</button>
   <a href="stargazing.html" class="res-btn" style="text-decoration:none;display:inline-block">Stargazing ★</a>
 </header>
+
+<div id="update-slot"></div>
 
 <div id="onboard-banner" class="onboard-banner" style="display:none">
   <span>Enter your in-game upgrade levels on the right panel to get started.</span>
@@ -285,8 +287,6 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
   <div id="upgrades-col"></div>
 
 </main>
-
-<div id="update-slot"></div>
 
 <div id="changelog-modal" class="modal-overlay" onclick="if(event.target===this)closeChangelog()">
   <div class="modal-content" role="dialog" aria-label="Changelog">
