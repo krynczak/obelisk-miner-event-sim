@@ -988,12 +988,7 @@ showOnboard();
 // ── VERSION CHECK ────────────────────────────────────────────
 (function checkUpdate(){
   const CURRENT='2.3.0',KEY='sim';
-  const TS_KEY='sim-version-check-ts';
-  const now=Date.now();
-  const last=parseInt(localStorage.getItem(TS_KEY)||'0');
-  if(now-last<3600000)return;
-  localStorage.setItem(TS_KEY,String(now));
-  fetch('version.json?t='+now).then(r=>r.json()).then(data=>{
+  fetch('version.json?t='+Date.now()).then(r=>r.json()).then(data=>{
     if(data[KEY]&&data[KEY]!==CURRENT){
       const slot=document.getElementById('update-slot');
       slot.innerHTML='<div class="update-banner">New version available (v'+data[KEY]+'). <a href="javascript:location.reload(true)">Reload to update</a></div>';
