@@ -156,6 +156,9 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 .pres-milestone{font-size:var(--fs-xs);color:var(--t2);margin-top:8px;padding-top:8px;border-top:1px solid var(--b1)}
 .pres-milestone b{color:var(--t1)}
 .pres-milestone .pres-ms-wave{color:var(--acc-dim)}
+.pres-advisor{font-size:var(--fs-xs);padding:4px 0;color:var(--t3)}
+.pres-advisor.go{color:var(--acc);font-weight:600}
+.pres-advisor.done{font-style:italic}
 
 
 /* ── Scrollbar ───────────────────────────── */
@@ -245,6 +248,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
       </div>
       <div id="gem-upgrades"></div>
       <div id="pres-milestone" class="pres-milestone"></div>
+      <div id="pres-advisor" class="pres-advisor"></div>
       <button class="res-btn" style="width:100%;margin-top:6px" onclick="prestigeReset()">Reset Upgrades</button>
       <div style="font-size:var(--fs-micro);color:var(--t3);margin-top:4px;text-align:center">Update prestige count above after resetting</div>
     </div>
@@ -896,6 +900,26 @@ function renderPrestigeMilestone(){
   const wave=nextP*5+5;
   el.innerHTML=`Next unlock: <b>Prestige ${nextP}</b> <span class="pres-ms-wave">(Wave ${wave})</span> - ${unlockCount} upgrade${unlockCount>1?'s':''}`;
 }
+const PRESTIGE_MILESTONES=[1,2,5,10,20,40];
+function renderPrestigeAdvice(){
+  const el=document.getElementById('pres-advisor');
+  if(!el)return;
+  const base=approxCache['base'];
+  if(!base){el.textContent='';return}
+  const wave=base[0];
+  const next=PRESTIGE_MILESTONES.find(m=>m>prestigeCount);
+  if(!next){el.textContent='All prestige milestones reached.';el.className='pres-advisor done';return}
+  const reqWave=next*5+5;
+  const steps=next-prestigeCount;
+  if(wave>=reqWave){
+    el.textContent=`Prestige recommended - target P${next}`+(steps>1?` (${steps}x prestige)`:'');
+    el.className='pres-advisor go';
+  }else{
+    const delta=(reqWave-wave).toFixed(1);
+    el.textContent=`Farm to wave ${reqWave} for P${next} (need ${delta} more waves)`;
+    el.className='pres-advisor wait';
+  }
+}
 function refreshGemValues(){
   for(let i=0;i<upgradeNames_gem.length;i++){
     const lvl=gemUp[i]||0,maxL=currentMaxLvl_gem(i);
@@ -1271,6 +1295,7 @@ function runAndRender(){
   refreshGemValues();
   refreshUpgradeValues();
   renderPrestigeMilestone();
+  renderPrestigeAdvice();
   document.getElementById('pres-input').value=prestigeCount;
   saveState();
 }
