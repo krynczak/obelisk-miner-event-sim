@@ -92,7 +92,8 @@ main{max-width:1100px;margin:0 auto;padding:20px;width:100%}
 .star-level input[type=number]::-webkit-inner-spin-button,
 .star-level input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
 .star-level input[type=number]:focus{outline:none;border-color:var(--acc);box-shadow:0 0 0 1px var(--acc-dim)}
-.star-level .lvl-max{font-family:'Chakra Petch',sans-serif;font-size:var(--fs-micro);color:var(--t3);margin-left:3px;font-variant-numeric:tabular-nums}
+.star-level .lvl-max{font-family:'Chakra Petch',sans-serif;font-size:var(--fs-micro);color:var(--t3);margin-left:3px;font-variant-numeric:tabular-nums;min-width:24px;text-align:right}
+.star-item:not(.unlocked) .star-level{display:none}
 
 /* ── Target selector ───────────────────── */
 .target-section{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
@@ -321,6 +322,11 @@ function loadJSON(key, fallback) {
 let unlocked = new Set(loadJSON(SK_UNLOCK, []));
 let levels = loadJSON(SK_LEVELS, {});
 
+// Migrate: unlocked stars must have level >= 1
+let _migrated = false;
+unlocked.forEach(name => { if (!levels[name] || levels[name] < 1) { levels[name] = 1; _migrated = true; } });
+if (_migrated) localStorage.setItem(SK_LEVELS, JSON.stringify(levels));
+
 function saveUnlocked() { localStorage.setItem(SK_UNLOCK, JSON.stringify([...unlocked])); }
 function saveLevels() { localStorage.setItem(SK_LEVELS, JSON.stringify(levels)); }
 function saveTarget(v) { localStorage.setItem(SK_TARGET, v); }
@@ -368,22 +374,31 @@ function buildUI() {
       div.className = "star-item" + (unlocked.has(star.name) ? " unlocked" : "") + (isMaxed(star) ? " maxed" : "");
       div.dataset.star = star.name;
 
-      const lvl = levels[star.name] || 0;
+      const lvl = unlocked.has(star.name) ? Math.max(1, levels[star.name] || 0) : 0;
       div.innerHTML =
         `<input type="checkbox" id="cb-${star.name}" tabindex="-1" ${unlocked.has(star.name) ? "checked" : ""}>` +
         `<label for="cb-${star.name}">${star.name}<span class="tip-text">${star.perk}</span></label>` +
         `<div class="star-level">` +
           `<button class="lvl-btn" tabindex="-1" data-dir="-1" aria-label="Decrease ${star.name} level">-</button>` +
-          `<input type="number" min="0" max="${star.maxLevel}" value="${lvl}" aria-label="${star.name} level" data-star="${star.name}">` +
+          `<input type="number" min="1" max="${star.maxLevel}" value="${lvl}" aria-label="${star.name} level" data-star="${star.name}">` +
           `<button class="lvl-btn" tabindex="-1" data-dir="1" aria-label="Increase ${star.name} level">+</button>` +
           `<span class="lvl-max">/${star.maxLevel}</span>` +
         `</div>`;
 
       // Checkbox: unlock/lock
       div.querySelector("input[type=checkbox]").addEventListener("change", e => {
-        if (e.target.checked) unlocked.add(star.name);
-        else unlocked.delete(star.name);
+        if (e.target.checked) {
+          unlocked.add(star.name);
+          if (!levels[star.name] || levels[star.name] < 1) {
+            levels[star.name] = 1;
+            lvlInput.value = 1;
+            saveLevels();
+          }
+        } else {
+          unlocked.delete(star.name);
+        }
         div.classList.toggle("unlocked", e.target.checked);
+        div.classList.toggle("maxed", e.target.checked && isMaxed(star));
         saveUnlocked();
         updateResults();
         populateTargetOptions();
@@ -398,6 +413,11 @@ function buildUI() {
           unlocked.add(star.name);
           cb.checked = true;
           div.classList.add("unlocked");
+          if (!levels[star.name] || levels[star.name] < 1) {
+            levels[star.name] = 1;
+            lvlInput.value = 1;
+            saveLevels();
+          }
           saveUnlocked();
           populateTargetOptions();
         }
@@ -411,8 +431,8 @@ function buildUI() {
       // Level input
       const lvlInput = div.querySelector("input[type=number]");
       lvlInput.addEventListener("change", () => {
-        let v = parseInt(lvlInput.value) || 0;
-        v = Math.max(0, Math.min(star.maxLevel, v));
+        let v = parseInt(lvlInput.value) || 1;
+        v = Math.max(1, Math.min(star.maxLevel, v));
         lvlInput.value = v;
         levels[star.name] = v;
         div.classList.toggle("maxed", v >= star.maxLevel);
@@ -425,8 +445,8 @@ function buildUI() {
       div.querySelectorAll(".lvl-btn").forEach(btn => {
         const step = () => {
           const dir = parseInt(btn.dataset.dir);
-          let v = (parseInt(lvlInput.value) || 0) + dir;
-          v = Math.max(0, Math.min(star.maxLevel, v));
+          let v = (parseInt(lvlInput.value) || 1) + dir;
+          v = Math.max(1, Math.min(star.maxLevel, v));
           lvlInput.value = v;
           levels[star.name] = v;
           div.classList.toggle("maxed", v >= star.maxLevel);
@@ -582,13 +602,23 @@ function renderTopFloors(container) {
 }
 
 function selectAll(state) {
-  const prev = new Set(unlocked);
-  STARS.forEach(s => { if (state) unlocked.add(s.name); else unlocked.delete(s.name); });
+  const prevUnlocked = new Set(unlocked);
+  const prevLevels = { ...levels };
+  STARS.forEach(s => {
+    if (state) {
+      unlocked.add(s.name);
+      if (!levels[s.name] || levels[s.name] < 1) levels[s.name] = 1;
+    } else {
+      unlocked.delete(s.name);
+    }
+  });
   syncCheckboxUI();
+  if (state) { saveLevels(); syncLevelUI(); }
   saveUnlocked(); updateResults(); populateTargetOptions(); updateProgress();
   showToast(state ? "All stars unlocked" : "All stars locked", () => {
-    unlocked = prev; syncCheckboxUI();
-    saveUnlocked(); updateResults(); populateTargetOptions(); updateProgress();
+    unlocked = prevUnlocked; levels = prevLevels;
+    syncCheckboxUI(); syncLevelUI();
+    saveUnlocked(); saveLevels(); updateResults(); populateTargetOptions(); updateProgress();
   });
 }
 function syncCheckboxUI() {
@@ -602,6 +632,7 @@ function syncCheckboxUI() {
 function resetLevels() {
   const prev = { ...levels };
   levels = {};
+  STARS.forEach(s => { if (unlocked.has(s.name)) levels[s.name] = 1; });
   saveLevels();
   syncLevelUI();
   updateResults(); updateProgress();
@@ -613,7 +644,7 @@ function resetLevels() {
 function syncLevelUI() {
   document.querySelectorAll(".star-level input[type=number]").forEach(inp => {
     const name = inp.dataset.star || inp.getAttribute("aria-label")?.replace(" level","");
-    inp.value = levels[name] || 0;
+    inp.value = unlocked.has(name) ? Math.max(1, levels[name] || 0) : (levels[name] || 0);
   });
   document.querySelectorAll(".star-item").forEach(el => {
     const star = STARS.find(s => s.name === el.dataset.star);
