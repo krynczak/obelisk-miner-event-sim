@@ -62,11 +62,6 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 .help-btn{background:var(--s3);border:1px solid var(--b1);color:var(--t3);font-family:'Chakra Petch',sans-serif;font-size:var(--fs-micro);font-weight:700;width:19px;height:19px;line-height:16px;text-align:center;cursor:pointer;padding:0;flex-shrink:0;border-radius:3px;transition:color .15s,border-color .15s;margin-left:auto;position:relative}
 .help-btn::after{content:'';position:absolute;inset:-13px}
 @media(hover:hover){.help-btn:hover{color:var(--acc);border-color:var(--acc-dim)}}
-.opt-seg{display:inline-flex;margin-left:11px;border:1px solid var(--b1);border-radius:4px;overflow:hidden;vertical-align:middle}
-.opt-seg-btn{background:var(--s3);border:none;border-right:1px solid var(--b1);color:var(--t3);font-family:'Chakra Petch',sans-serif;font-size:var(--fs-micro);font-weight:700;padding:3px 9px;cursor:pointer;transition:color .15s,background-color .15s;letter-spacing:.06em;text-transform:uppercase}
-.opt-seg-btn:last-child{border-right:none}
-@media(hover:hover){.opt-seg-btn:hover:not(.active){color:var(--acc)}}
-.opt-seg-btn.active{background:var(--acc-dim);color:var(--acc)}
 .help-wrap{position:relative;display:inline}
 .help-popup{display:none;position:absolute;top:29px;left:0;background:var(--s1);border:1px solid var(--b2);padding:13px 16px;font-family:'Space Mono',monospace;font-size:var(--fs-sm);font-weight:400;color:var(--t2);line-height:1.5;letter-spacing:0;text-transform:none;max-width:399px;min-width:266px;z-index:20;white-space:normal}
 .help-popup.open{display:block}
@@ -216,7 +211,6 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
 
 <header class="header">
   <h1 class="brand">⛏ OBELISK MINER EVENT SIM <span class="version">v2.4.0</span> <button class="help-btn" aria-label="Changelog" onclick="openChangelog()" style="margin-left:3px">?</button></h1>
-  <button class="res-btn" onclick="cycleResource()">Cycle Resource <span id="res-num">1</span> ▸</button>
   <button class="res-btn" id="btn-export" onclick="exportState()">Export ▾</button>
   <button class="res-btn" onclick="importState()">Import ▴</button>
   <a href="stargazing.html" class="res-btn" style="text-decoration:none;display:inline-block">Stargazing ★</a>
@@ -263,7 +257,7 @@ body{background:var(--bg);color:var(--t1);font-family:'Space Mono',monospace;fon
       <div class="sim-loading">Simulating…</div>
     </div>
     <div class="panel">
-      <div class="ptitle">Next Buy — best per tier <span class="opt-seg"><button class="opt-seg-btn active" id="opt-btn-rpm" onclick="setOptimizeMode('rpm')">res/min</button><button class="opt-seg-btn" id="opt-btn-wave" onclick="setOptimizeMode('wave')">max wave</button></span><span class="help-wrap"><button class="help-btn" aria-label="Help" onclick="toggleHelp(this)">?</button><div class="help-popup">Best upgrade per tier ranked by gain/cost efficiency. Click to buy +1 level (Shift+click for +10).<br><br><b>res/min:</b> ranks by farming speed - best when grinding resources.<br><b>max wave:</b> ranks by average wave reached - best when pushing for prestige/rewards. Attack damage is deprioritized once you already one-shot enemies; HP, block, and speed rise to the top.</div></span></div>
+      <div class="ptitle">Next Buy — best per tier <span class="help-wrap"><button class="help-btn" aria-label="Help" onclick="toggleHelp(this)">?</button><div class="help-popup">Best upgrade per tier ranked by wave gain per cost. Click to buy +1 level (Shift+click for +10).</div></span></div>
       <div id="top-picks"><div class="picks-empty">Calculating…</div></div>
     </div>
     <div class="panel">
@@ -541,51 +535,21 @@ function analyticalSim(player,enemy){
   const sub=Math.max(1,Math.min(5,Math.round(frac*5)||1));
   return[expectedWave,sub,time];
 }
-const GAIN_SIM_RUNS=200;
-// Monte Carlo fallback: 200 paired runs, returns gain in the current optimizeMode metric.
-// Called when deterministic sim shows 0 for non-offense upgrades (HP, speed, block, etc.).
-function mcGainForUpgrade(ti,uj){
-  const{p:bp,e:be}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
-  upgrades[ti][uj]=(upgrades[ti][uj]||0)+1;
-  const{p:up,e:ue}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
-  upgrades[ti][uj]--;
-  let baseTotal=0,upgTotal=0;
-  for(let i=0;i<GAIN_SIM_RUNS;i++){
-    const br=eventTest(bp,be),ur=eventTest(up,ue);
-    if(optimizeMode==='wave'){baseTotal+=br[0]+br[1]/5;upgTotal+=ur[0]+ur[1]/5;}
-    else{baseTotal+=resourcesPerMinute(br,currentResource,bp);upgTotal+=resourcesPerMinute(ur,currentResource,up);}
-  }
-  return Math.max(0,(upgTotal-baseTotal)/GAIN_SIM_RUNS);
-}
-// Compute gain for one upgrade (+1 level) against a base metric.
-// baseMetric = {rpm, wave} from the current base sim.
-// Handles offense-only filtering, mode branching, and MC fallback in one place.
-function computeUpgradeGain(ti,uj,p,e,base){
-  if(offenseOnly[ti][uj]&&get_highest_wave_killed_in_x_hits(p,e,1)>Math.floor(base.wave))return 0;
+// Compute wave gain for one upgrade (+1 level) using analyticalSim.
+function computeUpgradeGain(ti,uj,p,e,baseWave){
+  if(offenseOnly[ti][uj]&&get_highest_wave_killed_in_x_hits(p,e,1)>Math.floor(baseWave))return 0;
   upgrades[ti][uj]=(upgrades[ti][uj]||0)+1;
   const{p:pu,e:eu}=parseUpgrades(upgrades,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
   upgrades[ti][uj]--;
-  const det=avgEvent_short(pu,eu);
-  if(optimizeMode==='wave'){
-    const wGain=(det[0]+det[1]/5)-base.wave;
-    return wGain>0?wGain:mcGainForUpgrade(ti,uj);
-  }
-  const rpmGain=det[0]>0?resourcesPerMinute(det,currentResource,p)-base.rpm:0;
-  return rpmGain>0?rpmGain:mcGainForUpgrade(ti,uj);
+  return analyticalSim(pu,eu)[0]-baseWave;
 }
-// Budget planner variant: uses a local copy of levels instead of the global upgrades array.
-function computeGainFromLevels(ti,uj,levels,bp,be,base){
-  if(offenseOnly[ti][uj]&&get_highest_wave_killed_in_x_hits(bp,be,1)>Math.floor(base.wave))return 0;
+// Budget planner variant: uses local levels array instead of global upgrades.
+function computeGainFromLevels(ti,uj,levels,bp,be,baseWave){
+  if(offenseOnly[ti][uj]&&get_highest_wave_killed_in_x_hits(bp,be,1)>Math.floor(baseWave))return 0;
   levels[ti][uj]++;
   const{p,e}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
   levels[ti][uj]--;
-  const det=avgEvent_short(p,e);
-  if(optimizeMode==='wave'){
-    const wGain=(det[0]+det[1]/5)-base.wave;
-    return wGain>0?wGain:(approxCache[`${ti}_${uj}`]||0);
-  }
-  const rpmGain=det[0]>0?resourcesPerMinute(det,currentResource,bp)-base.rpm:0;
-  return rpmGain>0?rpmGain:(approxCache[`${ti}_${uj}`]||0);
+  return analyticalSim(p,e)[0]-baseWave;
 }
 
 // ── UI DATA ──────────────────────────────────────────────────
@@ -613,28 +577,15 @@ function formatNumber(n){
   const decimals=val>=100?0:val>=10?1:2;
   return val.toFixed(decimals)+suffixes[oom];
 }
-const resourceWaveReqs=[1,5,10,15]; // currency A every wave, B every 5th, C every 10th, D every 15th
-// Expected value of a random multiplier: chance c (0-1) of getting multiplier m, otherwise 1x
-function expectedMultiplier(c,m){return 1+c*(m-1)}
-// simResult = [finalWave, finalSub, totalTime] from avgEvent_short
-function resourcesPerMinute(simResult,resource,p){
-  if(!simResult||simResult[0]<0||simResult[2]<=0)return 0;
-  const res=resource||1,adj=res===1?(5-simResult[1])/5-1:0;
-  const avgWave=Math.floor((simResult[0]+adj)/resourceWaveReqs[res-1]);
-  if(avgWave<=0)return 0;
-  return(avgWave*avgWave+avgWave)*120/simResult[2]*expectedMultiplier((p.x5money||0)/100,5)*expectedMultiplier(p.x2money||0,2);
-}
 
 // ── PERSISTENCE ──────────────────────────────────────────────
 const LS_KEY='shminer_state';
-function saveState(){try{localStorage.setItem(LS_KEY,JSON.stringify({upgrades,gemUp,prestigeCount,baseCost,currentResource,optimizeMode}))}catch(_){}}
+function saveState(){try{localStorage.setItem(LS_KEY,JSON.stringify({upgrades,gemUp,prestigeCount,baseCost}))}catch(_){}}
 function applyStateFields(s){
   if(s.upgrades)upgrades=s.upgrades;
   if(s.gemUp)gemUp=s.gemUp;
   if(s.prestigeCount!=null)prestigeCount=s.prestigeCount;
   if(s.baseCost)baseCost=s.baseCost;
-  if(s.currentResource)currentResource=s.currentResource;
-  if(s.optimizeMode)optimizeMode=s.optimizeMode;
 }
 function loadState(){
   try{
@@ -645,7 +596,7 @@ function loadState(){
 
 // ── EXPORT / IMPORT ──────────────────────────────────────────
 function exportState(){
-  const data=JSON.stringify({upgrades,gemUp,prestigeCount,baseCost,currentResource});
+  const data=JSON.stringify({upgrades,gemUp,prestigeCount,baseCost});
   navigator.clipboard.writeText(data).then(()=>{
     const btn=document.getElementById('btn-export');
     const orig=btn.textContent;btn.textContent='Copied!';
@@ -660,8 +611,7 @@ function applyImport(text){
   try{
     const s=JSON.parse(text);
     if(!Array.isArray(s.upgrades)||s.upgrades.length!==4||!Array.isArray(s.gemUp)||s.gemUp.length!==4
-      ||typeof s.prestigeCount!=='number'||!Array.isArray(s.baseCost)||s.baseCost.length!==4
-      ||typeof s.currentResource!=='number'||s.currentResource<1||s.currentResource>4)
+      ||typeof s.prestigeCount!=='number'||!Array.isArray(s.baseCost)||s.baseCost.length!==4)
       throw new Error('invalid shape');
     applyStateFields(s);
     approxCache={};saveState();runAndRender();
@@ -680,8 +630,7 @@ function stopHold(){
 }
 
 // ── UI STATE ─────────────────────────────────────────────────
-let currentResource=1,baseCost=[0,0,0,0],approxCache={},cachedP=null,cachedE=null,shiftHeld=false;
-let optimizeMode='rpm'; // 'rpm' | 'wave'
+let baseCost=[0,0,0,0],approxCache={},cachedP=null,cachedE=null,shiftHeld=false;
 document.addEventListener('keydown',e=>{if(e.key==='Shift')shiftHeld=true});
 document.addEventListener('keyup',  e=>{if(e.key==='Shift')shiftHeld=false});
 
@@ -697,13 +646,6 @@ function prestigeReset(){
   for(let ti=0;ti<4;ti++)for(let uj=0;uj<upgrades[ti].length;uj++)upgrades[ti][uj]=0;
   approxCache={};runAndRender();
   showToast('Upgrades reset',()=>{for(let ti=0;ti<4;ti++)upgrades[ti]=[...prev[ti]];approxCache={};runAndRender()});
-}
-function cycleResource(){currentResource=(currentResource%4)+1;document.getElementById('res-num').textContent=currentResource;saveState();refreshUpgradeValues()}
-function setOptimizeMode(mode){
-  optimizeMode=mode;
-  document.getElementById('opt-btn-rpm').classList.toggle('active',mode==='rpm');
-  document.getElementById('opt-btn-wave').classList.toggle('active',mode==='wave');
-  approxCache={};saveState();refreshUpgradeValues();
 }
 function setUpgrade(ti,uj,val){upgrades[ti][uj]=Math.max(0,Math.min(currentMaxLvl(ti,uj),parseInt(val)||0));approxCache={};runAndRender()}
 function changeUpgrade(ti,uj,delta){
@@ -823,10 +765,8 @@ function buildUpgradesDOM(){
 }
 
 function refreshUpgradeValues(){
-  if(!approxCache['base']){
-    const baseSim=avgEvent_short(cachedP||playerStatsBase,cachedE||enemyStatsBase);
-    approxCache['base']={rpm:resourcesPerMinute(baseSim,currentResource,cachedP||playerStatsBase),wave:baseSim[0]+baseSim[1]/5};
-  }
+  if(!approxCache['base'])
+    approxCache['base']=analyticalSim(cachedP||playerStatsBase,cachedE||enemyStatsBase)[0];
   const base=approxCache['base'];
 
   // First pass: collect all gains
@@ -897,7 +837,7 @@ function refreshUpgradeValues(){
       </div>
       <div class="pick-right">
         <div class="pick-gain">${gainText}</div>
-        <div class="pick-cost">${optimizeMode==='wave'?'avg wave':`res${currentResource}/min`}</div>
+        <div class="pick-cost">avg wave</div>
       </div>
     </div>`;
   }).join('');
@@ -961,8 +901,7 @@ function budgetPlan(){
   const MAX_ITER=600;
   for(let iter=0;iter<MAX_ITER;iter++){
     const{p:bp,e:be}=parseUpgrades(levels,playerStatsBase,enemyStatsBase,prestigeCount,gemUp);
-    const bApx=avgEvent_short(bp,be);
-    const base={rpm:resourcesPerMinute(bApx,currentResource,bp),wave:bApx[0]+bApx[1]/5};
+    const baseWave=analyticalSim(bp,be)[0];
     let bestGain=0,bestTi=-1,bestUj=-1,bestCost=0;
     for(let ti=0;ti<4;ti++){
       if(res[ti]<=0)continue;
@@ -974,7 +913,7 @@ function budgetPlan(){
         if(lvl>=maxL)continue;
         const cost=costs[ti][uj]*Math.pow(1.25,lvl);
         if(cost>res[ti])continue;
-        const gain=computeGainFromLevels(ti,uj,levels,bp,be,base);
+        const gain=computeGainFromLevels(ti,uj,levels,bp,be,baseWave);
         if(gain>bestGain){bestGain=gain;bestTi=ti;bestUj=uj;bestCost=cost}
       }
     }
@@ -1029,7 +968,6 @@ function runAndRender(){
   refreshUpgradeValues();
   renderPrestigeMilestone();
   document.getElementById('pres-input').value=prestigeCount;
-  document.getElementById('res-num').textContent=currentResource;
   saveState();
 }
 
@@ -1079,8 +1017,6 @@ function dismissOnboard(){document.getElementById('onboard-banner').style.displa
 loadState();
 buildUpgradesDOM();
 buildGemsDOM();
-// Sync opt-seg button state after loadState
-(function(){document.getElementById('opt-btn-rpm').classList.toggle('active',optimizeMode==='rpm');document.getElementById('opt-btn-wave').classList.toggle('active',optimizeMode==='wave');})();
 runAndRender();
 showOnboard();
 
